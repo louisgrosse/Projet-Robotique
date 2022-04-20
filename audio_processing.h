@@ -30,7 +30,7 @@ void wait_send_to_computer(void);
 */
 float* get_audio_buffer_ptr(BUFFER_NAME_t name);
 
-void motor_sound_command(float* data,uint16_t num_samples);
-void LED_sound_control(uint16_t num_samples);
+void motor_sound_command(float* data1,float* data2,float* data3,float* data4);
+//void LED_sound_control(uint16_t num_samples);
 
 #endif /* AUDIO_PROCESSING_H */

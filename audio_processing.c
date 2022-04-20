@@ -32,12 +32,17 @@ static float micBack_output[FFT_SIZE];
 #define FREQ_RIGHT 23 //359HZ
 #define FREQ_BACKWARD 26 //406Hz
 #define MAX_FREQ 30 //we don’t analyze after this index to not use resources for nothing
-static float MAX_AMP=15000;
+
+#define FREQ1 15
+#define FREQ2 20
+#define FREQ3 25
+#define FREQ4 40
+#define FREQ5 45
 
 /*
 *	Callback called when the demodulation of the four microphones is done.
 *	We get 160 samples per mic every 10ms (16kHz)
-*	
+*
 *	params :
 *	int16_t *data			Buffer containing 4 times 160 samples. the samples are sorted by micro
 *							so we have [micRight1, micLeft1, micBack1, micFront1, micRight2, etc...]
@@ -66,35 +71,44 @@ void processAudioData(int16_t *data, uint16_t num_samples){
 		micBack_cmplx_input[j]=0;
 		micFront_cmplx_input[j]=0;
 		++j;
+		if(j >= (2 * FFT_SIZE))
+		{
+			break;
+		}
 	}
-	doFFT_optimized(FFT_SIZE, micRight_cmplx_input);
-	doFFT_optimized(FFT_SIZE, micLeft_cmplx_input);
-	doFFT_optimized(FFT_SIZE, micBack_cmplx_input);
-	doFFT_optimized(FFT_SIZE, micFront_cmplx_input);
-
-	arm_cmplx_mag_f32(micRight_cmplx_input, micRight_output, FFT_SIZE);
-	arm_cmplx_mag_f32(micLeft_cmplx_input, micLeft_output, FFT_SIZE);
-	arm_cmplx_mag_f32(micBack_cmplx_input, micBack_output, FFT_SIZE);
-	arm_cmplx_mag_f32(micFront_cmplx_input, micFront_output, FFT_SIZE);
-
-
-	if(k>8)
+	if(j >= (2 * FFT_SIZE))
 	{
-		//LED_sound_control(num_samples);
-		chBSemSignal(&sendToComputer_sem);
-		k=0;
+		doFFT_optimized(FFT_SIZE, micRight_cmplx_input);
+		doFFT_optimized(FFT_SIZE, micLeft_cmplx_input);
+		doFFT_optimized(FFT_SIZE, micBack_cmplx_input);
+		doFFT_optimized(FFT_SIZE, micFront_cmplx_input);
+
+		arm_cmplx_mag_f32(micRight_cmplx_input, micRight_output, FFT_SIZE);
+		arm_cmplx_mag_f32(micLeft_cmplx_input, micLeft_output, FFT_SIZE);
+		arm_cmplx_mag_f32(micBack_cmplx_input, micBack_output, FFT_SIZE);
+		arm_cmplx_mag_f32(micFront_cmplx_input, micFront_output, FFT_SIZE);
+
+
+		if(k>8)
+		{
+			//LED_sound_control(num_samples);
+			chBSemSignal(&sendToComputer_sem);
+			k=0;
+		}
+		j=0;
+		++k;
+		motor_sound_command(micRight_output,micLeft_output,micBack_output,micFront_output);
 	}
-	j=0;
-	++k;
-	motor_sound_command(micRight_cmplx_input,num_samples);
 }
 
 
-void wait_send_to_computer(void){
+void wait_send_to_computer(void)
+{
 	chBSemWait(&sendToComputer_sem);
 }
 
-float* get_audio_buffer_ptr(BUFFER_NAME_t name){
+float* get_audio_buffer_ptr(BUFFER_NAME_t name)
+{
 	if(name == LEFT_CMPLX_INPUT){
 		return micLeft_cmplx_input;
 	}
@@ -124,56 +138,62 @@ float* get_audio_buffer_ptr(BUFFER_NAME_t name){
 	}
 }
 
-void motor_sound_command(float* data,uint16_t num_samples)
+void motor_sound_command(float* data1,float* data2,float* data3,float* data4)
 {
-
-	float highest = MIN_VALUE_THRESHOLD;
+	static int16_t old_highest_index;
+	float highest1 = MIN_VALUE_THRESHOLD;
+	float highest2 = MIN_VALUE_THRESHOLD;
+	float highest3 = MIN_VALUE_THRESHOLD;
+	float highest4 = MIN_VALUE_THRESHOLD;
+	int16_t highest_index1 = -1;
+	int16_t highest_index2 = -1;
+	int16_t highest_index3 = -1;
+	int16_t highest_index4 = -1;
 	int16_t highest_index = -1;
-	for(uint16_t i = 0 ; i <= num_samples ; i++){
-		if(data[i] > highest){
-			highest = data[i];
-			highest_index = i;
+	for(uint16_t i = MIN_FREQ ; i <= FREQ5 ; i++)
+	{
+		if(data1[i] > highest1)
+		{
+			highest_index1 = i;
+			highest1 = data1[i];
+		}
+		if(data2[i] > highest2)
+		{
+			highest_index2 = i;
+			highest2 = data2[i];
+		}
+		if(data3[i] > highest3)
+		{
+			highest_index3 = i;
+			highest3 = data3[i];
+		}
+		if(data4[i] > highest4)
+		{
+			highest_index4 = i;
+			highest4 = data4[i];
 		}
 	}
-	if(highest>600)
+	highest_index = (int16_t)(highest_index1+highest_index2+highest_index3+highest_index4)/4;
+	highest_index = (int16_t) ((highest_index+old_highest_index)/2);
+	old_highest_index = highest_index;
+	if(highest_index<=FREQ2)
 	{
 		left_motor_set_speed(0);
 		right_motor_set_speed(0);
 	}
-	else if((highest>400) & (highest<=600))
+	else if((highest_index>=FREQ2) & (highest_index<=MAX_FREQ))
 	{
-		left_motor_set_speed(-1000);
-		right_motor_set_speed(1000);
+		left_motor_set_speed(-800);
+		right_motor_set_speed(800);
 	}
-	else if((highest>200) & (highest<400))
+	else if((highest_index>=MAX_FREQ) & (highest_index<=FREQ5))
 	{
-		left_motor_set_speed(1000);
-		right_motor_set_speed(-1000);
+		left_motor_set_speed(800);
+		right_motor_set_speed(800);
 	}
-	else if(highest<200)
-	{
-		left_motor_set_speed(0);
-		right_motor_set_speed(0);
-	}
-
-	/*
-	if(highest>MAX_AMP)
-	{
-		left_motor_set_speed(1000);
-		right_motor_set_speed(-1000);
-	}
-	else
+	else if(highest_index>=FREQ5)
 	{
 		left_motor_set_speed(0);
 		right_motor_set_speed(0);
 	}
-	*/
-
 }
-/*
-void LED_sound_control(uint16_t num_samples)
-{
-	RCC->AHB1ENR |= RCC_AHB1ENR_GPIODEN;
-
-}
-*/
