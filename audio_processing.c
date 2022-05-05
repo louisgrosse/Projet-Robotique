@@ -150,6 +150,11 @@ void motor_sound_command(float* data1,float* data2,float* data3,float* data4)
 	int16_t highest_index3 = -1;
 	int16_t highest_index4 = -1;
 	int16_t highest_index = -1;
+	uint8_t right = 0;
+	uint8_t left = 1;
+	uint8_t back = 2;
+	uint8_t front = 3;
+
 	for(uint16_t i = MIN_FREQ ; i <= FREQ5 ; i++)
 	{
 		if(data1[i] > highest1)
@@ -173,27 +178,64 @@ void motor_sound_command(float* data1,float* data2,float* data3,float* data4)
 			highest4 = data4[i];
 		}
 	}
+	uint8_t highest = 0;
+	if((highest1>=highest2) & (highest1>=highest3) & (highest1>=highest4))
+	{
+		highest = right;
+	}
+	else if ((highest2>=highest3) & (highest2>=highest4))
+	{
+		highest = left;
+	}
+	else if(highest3>=highest4)
+	{
+		highest = back;
+	}
+	else
+	{
+		highest = front;
+	}
 	highest_index = (int16_t)(highest_index1+highest_index2+highest_index3+highest_index4)/4;
 	highest_index = (int16_t) ((highest_index+old_highest_index)/2);
 	old_highest_index = highest_index;
-	if(highest_index<=FREQ2)
+	if(highest_index<=MAX_FREQ)
 	{
 		left_motor_set_speed(0);
 		right_motor_set_speed(0);
 	}
-	else if((highest_index>=FREQ2) & (highest_index<=MAX_FREQ))
+	/*else if((highest_index>=FREQ2) & (highest_index<=MAX_FREQ))
 	{
 		left_motor_set_speed(-800);
 		right_motor_set_speed(800);
-	}
-	else if((highest_index>=MAX_FREQ) & (highest_index<=FREQ5))
+	}*/
+	else if((highest_index>=MAX_FREQ)) //& (highest_index<=FREQ5))
 	{
-		left_motor_set_speed(800);
-		right_motor_set_speed(800);
+		if(highest == front)
+		{
+			left_motor_set_speed(800);
+			right_motor_set_speed(800);
+		}
+		if(highest == back)
+		{
+			left_motor_set_speed(800);
+			right_motor_set_speed(-800);
+		}
+		if(highest == right)
+		{
+			left_motor_set_speed(800);
+			right_motor_set_speed(-800);
+		}
+		if(highest == left)
+		{
+			left_motor_set_speed(-800);
+			right_motor_set_speed(800);
+		}
+
 	}
-	else if(highest_index>=FREQ5)
+	/*else if(highest_index>=FREQ5)
 	{
 		left_motor_set_speed(0);
 		right_motor_set_speed(0);
-	}
+	}*/
+
 }
