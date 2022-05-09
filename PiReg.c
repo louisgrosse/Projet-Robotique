@@ -38,7 +38,7 @@ int16_t pi_regulator(float amplitude, float goal){
 	}
 	uint32_t error1 = (uint32_t) error;
 	error1 /= correction;
-	if(get_highest_index()>=MAX_FREQ)
+	if(get_highest_index()>MAX_FREQ)
 	{
 		sum_error += error1;
 	}
@@ -87,6 +87,10 @@ static THD_FUNCTION(PiRegulator, arg) {
         else if(get_back_amplitude()>get_front_amplitude())
         {
         	speed_correction = turn_around;
+        	if(get_right_amplitude() < get_left_amplitude())
+        	{
+        		speed_correction = -speed_correction;
+        	}
         }
         else if((abs(speed_correction) < ROTATION_THRESHOLD))
         {
@@ -95,6 +99,7 @@ static THD_FUNCTION(PiRegulator, arg) {
         else
         {
         	speed_correction = (get_right_amplitude() - get_left_amplitude());
+        	speed_correction /= 10;
         }
         //if the line is nearly in front of the camera, don't rotate
         /*
