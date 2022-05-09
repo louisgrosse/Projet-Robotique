@@ -16,26 +16,36 @@
 #include <PiReg.h>
 #include <audio_processing.h>
 
+static float goal_amplitude = 90000;
+
 //simple PI regulator implementation
 int16_t pi_regulator(float amplitude, float goal){
 
-	float error = 0;
 	float speed = 0;
 
 	static float sum_error = 0;
+	float error = 0;
 
-	error = amplitude - goal;
+	error = goal - amplitude;
 
-	//disables the PI regulator if the error is to small
+	//disables the PI regulator if the error is too small
 	//this avoids to always move as we cannot exactly be where we want and
 	//the mics are a bit noisy
 	if(fabs(error) < ERROR_THRESHOLD){
 		return 0;
 	}
 
-	sum_error += error;
+	if(get_highest_index()>=MAX_FREQ)
+	{
+		sum_error += error;
+	}
+	else
+	{
+		return 0;
+	}
 
 	//we set a maximum and a minimum for the sum to avoid an uncontrolled growth
+
 	if(sum_error > MAX_SUM_ERROR){
 		sum_error = MAX_SUM_ERROR;
 	}else if(sum_error < -MAX_SUM_ERROR){
@@ -63,7 +73,8 @@ static THD_FUNCTION(PiRegulator, arg) {
 
         //computes the speed to give to the motors
         //distance_cm is modified by the image processing thread
-        speed = pi_regulator(get_front_amplitude(), GOAL_AMPLITUDE);
+        int16_t coeff = 50;
+        speed = (int16_t) pi_regulator(get_front_amplitude(), goal_amplitude)/coeff;
         //computes a correction factor to let the robot rotate to be in front of the line
         speed_correction = (get_right_amplitude() - get_left_amplitude());
 
@@ -71,17 +82,20 @@ static THD_FUNCTION(PiRegulator, arg) {
         if(abs(speed_correction) < ROTATION_THRESHOLD){
         	speed_correction = 0;
         }
-        if(get_highest_index()<=MAX_FREQ)
+        /*
+        if(get_back_amplitude()>=get_front_amplitude())
         {
-        	right_motor_set_speed(0);
-			left_motor_set_speed(0);
+        	right_motor_set_pos(13);
+        	left_motor_set_pos(-13);
         }
-        else
-        {
-        	//applies the speed from the PI regulator and the correction for the rotation
-			right_motor_set_speed(speed - ROTATION_COEFF * speed_correction);
-			left_motor_set_speed(speed + ROTATION_COEFF * speed_correction);
-        }
+        */
+		//applies the speed from the PI regulator and the correction for the rotation
+
+		right_motor_set_speed(speed);
+		left_motor_set_speed(speed);
+
+		//right_motor_set_speed(speed-ROTATION_COEFF * speed_correction);
+		//left_motor_set_speed(speed+ROTATION_COEFF * speed_correction);
 
         //100Hz
         chThdSleepUntilWindowed(time, time + MS2ST(10));
