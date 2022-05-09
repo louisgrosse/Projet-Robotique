@@ -31,13 +31,20 @@ static float micBack_output[FFT_SIZE];
 #define FREQ_LEFT 19 //296Hz
 #define FREQ_RIGHT 23 //359HZ
 #define FREQ_BACKWARD 26 //406Hz
-#define MAX_FREQ 30 //we don’t analyze after this index to not use resources for nothing
+//#define MAX_FREQ 30 //we don’t analyze after this index to not use resources for nothing
 
 #define FREQ1 15
 #define FREQ2 20
 #define FREQ3 25
 #define FREQ4 40
 #define FREQ5 45
+
+static float highest_amp_left = MIN_VALUE_THRESHOLD;
+static float highest_amp_right = MIN_VALUE_THRESHOLD;
+static float highest_amp_front = MIN_VALUE_THRESHOLD;
+static float highest_amp_back = MIN_VALUE_THRESHOLD;
+static float highest_amplitude = MIN_VALUE_THRESHOLD;
+static int16_t highest_index = 0;
 
 /*
 *	Callback called when the demodulation of the four microphones is done.
@@ -138,104 +145,157 @@ float* get_audio_buffer_ptr(BUFFER_NAME_t name)
 	}
 }
 
-void motor_sound_command(float* data1,float* data2,float* data3,float* data4)
+void motor_sound_command(float* data_right,float* data_left,float* data_back,float* data_front)
 {
 	static int16_t old_highest_index;
-	float highest1 = MIN_VALUE_THRESHOLD;
-	float highest2 = MIN_VALUE_THRESHOLD;
-	float highest3 = MIN_VALUE_THRESHOLD;
-	float highest4 = MIN_VALUE_THRESHOLD;
-	int16_t highest_index1 = -1;
-	int16_t highest_index2 = -1;
-	int16_t highest_index3 = -1;
-	int16_t highest_index4 = -1;
-	int16_t highest_index = -1;
-	uint8_t right = 0;
+	//highest amplitudes of the 4 microphones
+	highest_amp_right = MIN_VALUE_THRESHOLD;
+	highest_amp_left = MIN_VALUE_THRESHOLD;
+	highest_amp_front = MIN_VALUE_THRESHOLD;
+	highest_amp_back = MIN_VALUE_THRESHOLD;
+	int16_t highest_index_right = -1;
+	int16_t highest_index_left = -1;
+	int16_t highest_index_back = -1;
+	int16_t highest_index_front = -1;
+	/*uint8_t right = 0;
 	uint8_t left = 1;
 	uint8_t back = 2;
-	uint8_t front = 3;
+	uint8_t front = 3;*/
 
 	for(uint16_t i = MIN_FREQ ; i <= FREQ5 ; i++)
 	{
-		if(data1[i] > highest1)
+		if(data_right[i] > highest_amp_right)
 		{
-			highest_index1 = i;
-			highest1 = data1[i];
+			highest_index_right = i;
+			highest_amp_right = data_right[i];
 		}
-		if(data2[i] > highest2)
+		if(data_left[i] > highest_amp_left)
 		{
-			highest_index2 = i;
-			highest2 = data2[i];
+			highest_index_left = i;
+			highest_amp_left = data_left[i];
 		}
-		if(data3[i] > highest3)
+		if(data_back[i] > highest_amp_back)
 		{
-			highest_index3 = i;
-			highest3 = data3[i];
+			highest_index_back = i;
+			highest_amp_back = data_back[i];
 		}
-		if(data4[i] > highest4)
+		if(data_front[i] > highest_amp_front)
 		{
-			highest_index4 = i;
-			highest4 = data4[i];
+			highest_index_front = i;
+			highest_amp_front = data_front[i];
 		}
 	}
-	uint8_t highest = 0;
-	if((highest1>=highest2) & (highest1>=highest3) & (highest1>=highest4))
+	if((highest_amp_front>highest_amp_back) & (highest_amp_front>highest_amp_left) & (highest_amp_front>highest_amp_right))
 	{
-		highest = right;
+		highest_amplitude = highest_amp_front;
 	}
-	else if ((highest2>=highest3) & (highest2>=highest4))
+	else if ((highest_amp_back>highest_amp_right) & (highest_amp_front>highest_amp_left))
 	{
-		highest = left;
+		highest_amplitude = highest_amp_back;
 	}
-	else if(highest3>=highest4)
+	else if(highest_amp_left>highest_amp_right)
 	{
-		highest = back;
+		highest_amplitude = highest_amp_left;
 	}
 	else
 	{
-		highest = front;
+		highest_amplitude = highest_amp_right;
 	}
-	highest_index = (int16_t)(highest_index1+highest_index2+highest_index3+highest_index4)/4;
+	/*uint8_t highest_side = 0;
+	float highest = MIN_VALUE_THRESHOLD;
+	if((highest_right>=highest_left) & (highest_right>=highest_back) & (highest_right>=highest_front))
+	{
+		highest_side = right;
+		highest = highest_right;
+	}
+	else if ((highest_left>=highest_back) & (highest_left>=highest_front))
+	{
+		highest_side = left;
+		highest = highest_left;
+	}
+	else if(highest_back>=highest_front)
+	{
+		highest_side = back;
+		highest = highest_back;
+	}
+	else
+	{
+		highest_side = front;
+		highest = highest_front;
+	}
+	*/
+	highest_index = (int16_t)(highest_index_right+highest_index_left+highest_index_back+highest_index_front)/4;
 	highest_index = (int16_t) ((highest_index+old_highest_index)/2);
 	old_highest_index = highest_index;
-	if(highest_index<=MAX_FREQ)
+	/*if(highest_index<=MAX_FREQ)
 	{
 		left_motor_set_speed(0);
 		right_motor_set_speed(0);
 	}
-	/*else if((highest_index>=FREQ2) & (highest_index<=MAX_FREQ))
+	else if((highest_index>=FREQ2) & (highest_index<=MAX_FREQ))
 	{
 		left_motor_set_speed(-800);
 		right_motor_set_speed(800);
-	}*/
-	else if((highest_index>=MAX_FREQ)) //& (highest_index<=FREQ5))
+	}
+
+	else if((highest_index>=MAX_FREQ) & (highest > MIN_AMPLITUDE)) //& (highest_index<=FREQ5))
 	{
-		if(highest == front)
+		if(highest_side == front)
 		{
 			left_motor_set_speed(800);
 			right_motor_set_speed(800);
 		}
-		if(highest == back)
+		if(highest_side == back)
+		{
+			left_motor_set_speed(-800);
+			right_motor_set_speed(-800);
+		}
+		if(highest_side == right)
 		{
 			left_motor_set_speed(800);
 			right_motor_set_speed(-800);
 		}
-		if(highest == right)
-		{
-			left_motor_set_speed(800);
-			right_motor_set_speed(-800);
-		}
-		if(highest == left)
+		if(highest_side == left)
 		{
 			left_motor_set_speed(-800);
 			right_motor_set_speed(800);
 		}
 
 	}
-	/*else if(highest_index>=FREQ5)
+	else if(highest_index>=FREQ5)
 	{
 		left_motor_set_speed(0);
 		right_motor_set_speed(0);
 	}*/
 
+}
+
+float get_right_amplitude(void)
+{
+	return highest_amp_right;
+}
+
+float get_left_amplitude(void)
+{
+	return highest_amp_left;
+}
+
+uint16_t get_highest_index(void)
+{
+	return highest_index;
+}
+
+float get_front_amplitude(void)
+{
+	return highest_amp_front;
+}
+
+float get_back_amplitude(void)
+{
+	return highest_amp_back;
+}
+
+float get_highest_amplitude(void)
+{
+	return highest_amplitude;
 }

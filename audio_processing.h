@@ -31,6 +31,12 @@ void wait_send_to_computer(void);
 float* get_audio_buffer_ptr(BUFFER_NAME_t name);
 
 void motor_sound_command(float* data1,float* data2,float* data3,float* data4);
-//void LED_sound_control(uint16_t num_samples);
+
+float get_right_amplitude(void);
+float get_left_amplitude(void);
+float get_front_amplitude(void);
+float get_back_amplitude(void);
+float get_highest_amplitude(void);
+uint16_t get_highest_index(void);
 
 #endif /* AUDIO_PROCESSING_H */
