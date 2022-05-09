@@ -80,11 +80,15 @@ static THD_FUNCTION(PiRegulator, arg) {
         //computes a correction factor to let the robot rotate to be in front of the line
         //speed_correction = (get_right_amplitude() - get_left_amplitude());
         //speed_correction /= correction;
-        if(get_back_amplitude()>get_front_amplitude())
+        if(get_highest_index()<MAX_FREQ)
+        {
+        	speed_correction = 0;
+        }
+        else if(get_back_amplitude()>get_front_amplitude())
         {
         	speed_correction = turn_around;
         }
-        else if((abs(speed_correction) < ROTATION_THRESHOLD) || get_highest_index()<MAX_FREQ)
+        else if((abs(speed_correction) < ROTATION_THRESHOLD))
         {
         	speed_correction = 0;
         }
