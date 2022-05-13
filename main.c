@@ -5,6 +5,7 @@
 #include "ch.h"
 #include "hal.h"
 #include "memory_protection.h"
+#include "sensors/proximity.h"
 #include <usbcfg.h>
 #include <main.h>
 #include <chprintf.h>
@@ -30,7 +31,8 @@ CONDVAR_DECL(bus_condvar);
 
 static void serial_start(void)
 {
-	static SerialConfig ser_cfg = {
+	static SerialConfig ser_cfg =
+	{
 	    115200,
 	    0,
 	    0,
@@ -40,11 +42,13 @@ static void serial_start(void)
 	sdStart(&SD3, &ser_cfg); // UART3.
 }
 
-static void timer12_start(void){
+static void timer12_start(void)
+{
     //General Purpose Timer configuration   
     //timer 12 is a 16 bit timer so we can measure time
     //to about 65ms with a 1Mhz counter
-    static const GPTConfig gpt12cfg = {
+    static const GPTConfig gpt12cfg =
+    {
         1000000,        /* 1MHz timer clock in order to measure uS.*/
         NULL,           /* Timer callback.*/
         0,
@@ -71,6 +75,8 @@ int main(void)
     timer12_start();
     //inits the motors
     motors_init();
+    //inits proximity sensors
+    proximity_start();
 
     messagebus_init(&bus, &bus_lock, &bus_condvar);
 
@@ -82,13 +88,15 @@ int main(void)
     //starts the microphones processing thread.
     //it calls the callback given in parameter when samples are ready
     mic_start(&processAudioData);
+    //starts the proximity thread and the pi regulator thread
     avoid_obstacle_start();
     pi_regulator_start();
 #endif  /* SEND_FROM_MIC */
 
     /* Infinite loop. */
 
-    while (1) {
+    while (1)
+    {
 #ifdef SEND_FROM_MIC
         //waits until a result must be sent to the computer
         wait_send_to_computer();

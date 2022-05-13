@@ -17,10 +17,11 @@
 #include <audio_processing.h>
 #include <Avoid_Obstacle.h>
 
-//simple PI regulator implementation
-int16_t pi_regulator(float amplitude, float goal)
-{
 
+//PI regulator implementation
+int16_t Pi_Reg(float amplitude, float goal)
+{
+	//this function takes care only of the distance between the target and the robot (not the angle)
 	float speed = 0;
 
 	static int32_t sum_error = 0;
@@ -28,12 +29,13 @@ int16_t pi_regulator(float amplitude, float goal)
 
 	error = goal - amplitude;
 
-	if((fabs(error) < ERROR_THRESHOLD) || (get_back_amplitude() > get_front_amplitude())){
+	if((fabs(error) < ERROR_THRESHOLD) || (get_back_amplitude() > get_front_amplitude()))
+	{
 		return 0;
 	}
 	int32_t error1 = (int32_t) error;
 	error1 /= correction;
-	if(get_highest_index()>MAX_FREQ)
+	if(get_highest_index()>MOV_FREQ)
 	{
 		sum_error += error1;
 	}
@@ -57,11 +59,11 @@ int16_t pi_regulator(float amplitude, float goal)
 static THD_WORKING_AREA(waPiRegulator, 256);
 static THD_FUNCTION(PiRegulator, arg)
 {
-
     chRegSetThreadName(__FUNCTION__);
     (void)arg;
 
     systime_t time;
+    time = chVTGetSystemTime();
 
     int16_t speed = 0;
     int16_t speed_correction = 0;
@@ -70,15 +72,15 @@ static THD_FUNCTION(PiRegulator, arg)
     {
         time = chVTGetSystemTime();
 
-        unsigned int mean_prox_right = (get_prox_front_right()+get_prox_side_right())/2;
-        unsigned int mean_prox_left = (get_prox_front_left()+get_prox_side_left())/2;
+        bool no_obstacle_detected = (get_prox_mean_right() < prox_distance) & (get_prox_mean_left() < prox_distance);
 
-        if((mean_prox_right < prox_distance) & (mean_prox_left < prox_distance))
+        speed_correction = get_dephasage();
+
+        if(no_obstacle_detected)
         {
-        	speed = pi_regulator(get_highest_amplitude(), goal_amplitude);
-        	speed_correction = get_dephasage();
+        	speed = Pi_Reg(get_highest_amplitude(), goal_amplitude);
 
-			if(get_highest_index() < MAX_FREQ || abs(speed_correction) < ROTATION_THRESHOLD)
+			if(get_highest_index() < MOV_FREQ || abs(speed_correction) < ROTATION_THRESHOLD)
 			{
 				speed_correction = 0;
 			}
@@ -87,17 +89,19 @@ static THD_FUNCTION(PiRegulator, arg)
 				speed_correction *= ROTATION_COEFF;
 				speed_correction = (int16_t) speed_correction;
 			}
-			//set_body_led(0);
+			set_body_led(1);
         }
-        else if ((get_prox_front_right() < prox_distance) & (get_prox_front_left() < prox_distance))
+        else if ((get_prox_right() < prox_distance) & (get_prox_front_left() < prox_distance))
         {
+        	//the obstacle is on the side
         	speed = prox_speed;
         	speed_correction = 0;
-        	set_body_led(1);
+        	set_body_led(0);
         }
-        else
+        else if((get_prox_front_right() > prox_distance) || (get_prox_front_left() > prox_distance))
         {
-        	set_body_led(1);
+        	//the obstacle is in front
+        	set_body_led(0);//test
 			if (get_prox_front_right() > get_prox_front_left())
 			{
 				speed = 0;
@@ -109,39 +113,6 @@ static THD_FUNCTION(PiRegulator, arg)
 				speed_correction = -prox_speed;
 			}
 		}
-
-
-        /*
-        else if(get_back_amplitude()>get_front_amplitude())
-        {
-        	speed_correction = turn_around;
-        	if(get_right_amplitude() < get_left_amplitude())
-        	{
-        		speed_correction = -speed_correction;
-        	}
-        }
-
-        if((abs(speed_correction) < ROTATION_THRESHOLD))
-        {
-        	//speed_correction = (get_right_amplitude() - get_left_amplitude());
-        	//speed_correction /= 10000;
-        	speed_correction = 0;
-
-        }
-
-
-        speed_correction = get_dephasage();
-
-        if(get_highest_index()<MAX_FREQ || abs(speed_correction) < ROTATION_THRESHOLD)
-		{
-			speed_correction = 0;
-		}
-        else
-        {
-        	speed_correction *= ROTATION_COEFF;
-        	speed_correction = (int16_t) speed_correction;
-        }
-		*/
 
 		right_motor_set_speed(speed + speed_correction);
 		left_motor_set_speed(speed - speed_correction);

@@ -14,10 +14,10 @@ extern "C" {
 #define PXTOCM					1570.0f //experimental value
 //#define GOAL_AMPLITUDE 			200000
 #define ERROR_THRESHOLD			15000
-#define KP						600.0f
+#define KP						700.0f
 #define KI 						3.5f	//must not be zero
 #define MAX_SUM_ERROR 			(MOTOR_SPEED_LIMIT/KI)
-#define MAX_FREQ 30
+#define MOV_FREQ 				30
 #define goal_amplitude 			110000
 #define turn_around 			800
 #define correction 				10000

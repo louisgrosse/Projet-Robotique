@@ -26,18 +26,9 @@ static float micFront_output[FFT_SIZE];
 static float micBack_output[FFT_SIZE];
 
 #define MIN_VALUE_THRESHOLD 10000
-#define MIN_FREQ 10 //we don’t analyze before this index to not use resources for nothing
-#define FREQ_FORWARD 16 //250Hz
-#define FREQ_LEFT 19 //296Hz
-#define FREQ_RIGHT 23 //359HZ
-#define FREQ_BACKWARD 26 //406Hz
-//#define MAX_FREQ 30 //we don’t analyze after this index to not use resources for nothing
 
-#define FREQ1 15
-#define FREQ2 20
-#define FREQ3 25
-#define FREQ4 40
-#define FREQ5 45
+#define MIN_FREQ 10
+#define MAX_FREQ 45
 
 static float highest_amp_left = MIN_VALUE_THRESHOLD;
 static float highest_amp_right = MIN_VALUE_THRESHOLD;
@@ -222,7 +213,7 @@ void sound_processing(float* data_right,float* data_left,float* data_back,float*
 	int16_t highest_index_back = -1;
 	int16_t highest_index_front = -1;
 
-	for(uint16_t i = MIN_FREQ ; i <= FREQ5 ; i++)
+	for(uint16_t i = MIN_FREQ ; i <= MAX_FREQ ; i++)
 	{
 		if(data_right[i] > highest_amp_right)
 		{
