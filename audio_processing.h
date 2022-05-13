@@ -30,7 +30,7 @@ void wait_send_to_computer(void);
 */
 float* get_audio_buffer_ptr(BUFFER_NAME_t name);
 
-void motor_sound_command(float* data1,float* data2,float* data3,float* data4);
+void sound_processing(float* data1,float* data2,float* data3,float* data4);
 
 float get_right_amplitude(void);
 float get_left_amplitude(void);
@@ -38,5 +38,6 @@ float get_front_amplitude(void);
 float get_back_amplitude(void);
 float get_highest_amplitude(void);
 uint16_t get_highest_index(void);
+float get_dephasage(void);
 
 #endif /* AUDIO_PROCESSING_H */
