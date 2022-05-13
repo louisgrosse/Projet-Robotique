@@ -28,7 +28,7 @@ static float micBack_output[FFT_SIZE];
 #define MIN_VALUE_THRESHOLD 10000
 
 #define MIN_FREQ 10
-#define MAX_FREQ 45
+#define MAX_FREQ 40
 
 static float highest_amp_left = MIN_VALUE_THRESHOLD;
 static float highest_amp_right = MIN_VALUE_THRESHOLD;
@@ -73,17 +73,15 @@ static THD_FUNCTION(FollowSound, arg) {
 				MaxNormIndex_real_right = i;
 			}
 			/*
-			if(micLeft_output[i] > max_norm2)
+			if(micLeft_output[i] > max_norm_left)
 			{
-				max_norm2 = micLeft_output[i];
+				max_norm_left = micLeft_output[i];
 				MaxNorm_real_left = i;
 			}
 		*/
 		}
 
 		max_norm_left = micLeft_output[MaxNormIndex_real_right];
-
-		//max_norm2 = micLeft_output[MaxNormIndex_real_right];
 
 		float max_norm_right_check = max_norm_right;
 		float max_norm_left_check = max_norm_left;
@@ -152,7 +150,6 @@ void processAudioData(int16_t *data, uint16_t num_samples){
 
 		if(k>8)
 		{
-			//LED_sound_control(num_samples);
 			chBSemSignal(&sendToComputer_sem);
 			k=0;
 		}
@@ -213,6 +210,8 @@ void sound_processing(float* data_right,float* data_left,float* data_back,float*
 	int16_t highest_index_back = -1;
 	int16_t highest_index_front = -1;
 
+
+	//we search the frequency of the highest amplitude of each mics
 	for(uint16_t i = MIN_FREQ ; i <= MAX_FREQ ; i++)
 	{
 		if(data_right[i] > highest_amp_right)
@@ -236,24 +235,32 @@ void sound_processing(float* data_right,float* data_left,float* data_back,float*
 			highest_amp_front = data_front[i];
 		}
 	}
+
+	//we search the highest amplitude between the 4 mics
 	if((highest_amp_front>highest_amp_back) & (highest_amp_front>highest_amp_left) & (highest_amp_front>highest_amp_right))
 	{
 		highest_amplitude = highest_amp_front;
+		highest_index = highest_index_front;
 	}
 	else if ((highest_amp_back>highest_amp_right) & (highest_amp_front>highest_amp_left))
 	{
 		highest_amplitude = highest_amp_back;
+		highest_index = highest_index_back;
 	}
 	else if(highest_amp_left>highest_amp_right)
 	{
 		highest_amplitude = highest_amp_left;
+		highest_index = highest_index_left;
 	}
 	else
 	{
 		highest_amplitude = highest_amp_right;
+		highest_index = highest_index_right;
 	}
 
-	highest_index = (int16_t)(highest_index_right+highest_index_left+highest_index_back+highest_index_front)/4;
+	//mean of the 4 mics
+	//highest_index = (int16_t)(highest_index_right+highest_index_left+highest_index_back+highest_index_front)/4;
+	//mean on 2 samples to smoothen the movements
 	highest_index = (int16_t) ((highest_index+old_highest_index)/2);
 	old_highest_index = highest_index;
 
