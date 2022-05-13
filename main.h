@@ -22,7 +22,7 @@ extern "C" {
 #define turn_around 			800
 #define correction 				10000
 #define speed_conversion 		4  		//convert the speed given by the pi_regulator to be between 400 and 800
-#define prox_distance			125
+#define prox_distance			150
 #define prox_speed				600
 
 /** Robot wide IPC bus. */

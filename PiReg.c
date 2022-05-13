@@ -72,9 +72,14 @@ static THD_FUNCTION(PiRegulator, arg)
     {
         time = chVTGetSystemTime();
 
-        bool no_obstacle_detected = (get_prox_mean_right() < prox_distance) & (get_prox_mean_left() < prox_distance);
-
         speed_correction = get_dephasage();
+
+        //mainly for readability purposes
+        bool no_obstacle_detected = (get_prox_mean_right() < prox_distance) & (get_prox_mean_left() < prox_distance);
+        bool obstacle_in_front = (get_prox_front_right() > prox_distance) || (get_prox_front_left() > prox_distance);
+        bool obstacle_left = ((get_prox_right() < prox_distance) & (speed_correction > ROTATION_THRESHOLD));
+        bool obstacle_right = ((get_prox_left() < prox_distance) & (speed_correction < -ROTATION_THRESHOLD));
+        bool obstacle_on_side = (obstacle_left || obstacle_right);
 
         if(no_obstacle_detected)
         {
@@ -91,16 +96,15 @@ static THD_FUNCTION(PiRegulator, arg)
 			}
 			set_body_led(1);
         }
-        else if ((get_prox_right() < prox_distance) & (get_prox_front_left() < prox_distance))
+        else if (obstacle_on_side)
         {
         	//the obstacle is on the side
         	speed = prox_speed;
         	speed_correction = 0;
         	set_body_led(0);
         }
-        else if((get_prox_front_right() > prox_distance) || (get_prox_front_left() > prox_distance))
+        else if(obstacle_in_front)
         {
-        	//the obstacle is in front
         	set_body_led(0);//test
 			if (get_prox_front_right() > get_prox_front_left())
 			{
