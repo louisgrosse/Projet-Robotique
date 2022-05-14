@@ -80,12 +80,12 @@ static THD_FUNCTION(PiRegulator, arg)
 
         FREQ = get_highest_index();
 
-
+        /*
         uint16_t a = FREQ;
         uint16_t b = MOV_FREQ;
         volatile float c = fabsf(speed_correction);
         float d = ROTATION_THRESHOLD;
-        /*
+
         volatile unsigned int e = get_prox_front_right();
         volatile unsigned int f = get_prox_front_left();
         */
@@ -103,22 +103,23 @@ static THD_FUNCTION(PiRegulator, arg)
         {
         	speed = Pi_Reg(get_highest_amplitude(), goal_amplitude);
 
-			if(MOVE)
-			{
-				speed_correction *= ROTATION_COEFF;
-				if(speed_correction >= 0)
-				{
-					speed_correction = (int16_t) speed_correction + ROTATION_COEFF;
-				}
-				else
-				{
-					speed_correction = (int16_t) speed_correction - ROTATION_COEFF;
-				}
-			}
-			else
+        	if(fabsf(speed_correction) < ROTATION_THRESHOLD)
 			{
 				speed_correction = 0;
 			}
+			else if(speed_correction >= 0)
+			{
+				//speed_correction *= ROTATION_COEFF;
+				//speed_correction = (int16_t) speed_correction + ROTATION_COEFF;
+				speed_correction = ROTATION_COEFF;
+			}
+			else if(speed_correction < 0)
+			{
+				//speed_correction *= ROTATION_COEFF;
+				//speed_correction = (int16_t) speed_correction - ROTATION_COEFF;
+				speed_correction = -ROTATION_COEFF;
+			}
+
 			speed = 0;
 			set_body_led(0);//test
         }
@@ -149,12 +150,10 @@ static THD_FUNCTION(PiRegulator, arg)
         	speed_correction = 0;
         }
 
-
-        if(!MOVE || fabsf(speed_correction) < ROTATION_THRESHOLD)
+		if(!MOVE)
 		{
-			speed_correction = 0;
 			speed = 0;
-			set_body_led(1);
+			speed_correction= 0;
 		}
 
 		right_motor_set_speed(speed - speed_correction);

@@ -27,8 +27,8 @@ static float micBack_output[FFT_SIZE];
 
 #define MIN_VALUE_THRESHOLD 10000
 
-#define MIN_FREQ 20
-#define MAX_FREQ 45
+#define MIN_FREQ 30
+#define MAX_FREQ 40
 
 //Highest amplitudes of the mics
 static float highest_amp_left = MIN_VALUE_THRESHOLD;
@@ -123,9 +123,17 @@ void phase_calculation(void)
 	 	 //chRegSetThreadName(__FUNCTION__);
 	   //(void)arg;
 
-		static uint8_t h = 0;
-		static double sum_dephasage = 0;
-		static double mean_dephasage = 0;
+		//circular buffer
+		/*
+		static double Buffer_dephasage[5] ;
+		static uint8_t dephasage_index = 0;
+		if(dephasage_index > 4)
+		{
+			dephasage_index = 0;
+		}
+		*/
+
+		//phase of the right and left microphones
 		static double last_dephasage = 0;
 		double phase_right = 0;
 		double phase_left = 0;
@@ -135,7 +143,6 @@ void phase_calculation(void)
 		//max_norm_left = micLeft_output[MaxNormIndex_real_right];
 
 		int16_t MaxNormIndex_cmplx_right = -1;
-		int16_t MaxNormIndex_cmplx_left = -1;
 
 		int16_t highest_index_right_test = highest_index_right;
 		int16_t highest_index_left_test = highest_index_left;
@@ -151,34 +158,47 @@ void phase_calculation(void)
 		}
 
 		MaxNormIndex_cmplx_right = highest_index_right_test + 1;
-		MaxNormIndex_cmplx_left = highest_index_left_test + 1;
 
-		if((highest_amp_right > 2*MIN_VALUE_THRESHOLD) || (highest_amp_left > 2*MIN_VALUE_THRESHOLD))
+		if(highest_amp_right > 2*MIN_VALUE_THRESHOLD)
 		{
 			phase_right = atan2(micRight_cmplx_input[MaxNormIndex_cmplx_right],micRight_cmplx_input[highest_index_right_test]);
-			phase_left = atan2(micLeft_cmplx_input[MaxNormIndex_cmplx_left],micLeft_cmplx_input[highest_index_left_test]);
+			phase_left = atan2(micLeft_cmplx_input[MaxNormIndex_cmplx_right],micLeft_cmplx_input[highest_index_right_test]);
 			dephasage = phase_right-phase_left;
-			if (dephasage < -PHASE_THRESHOLD || dephasage > PHASE_THRESHOLD)
-			{
-				dephasage = fabs(phase_right) - fabs(phase_left);
-				if(last_dephasage > 0)
-				{
-				  dephasage = fabs(dephasage);
-				}
-				else
-				{
-				  dephasage= -fabs(dephasage);
-				}
-			}
-			if (h > 2)
-			{
-			  mean_dephasage = sum_dephasage/h;
-			  dephasage = mean_dephasage;
-			  h = 0;
-			  sum_dephasage = 0;
-			}
-			h++;
 		}
+		if (dephasage < -PHASE_THRESHOLD || dephasage > PHASE_THRESHOLD)
+		{
+			dephasage = fabs(phase_right) - fabs(phase_left);
+			if(last_dephasage > 0)
+			{
+			  dephasage = fabs(dephasage);
+			}
+			else
+			{
+			  dephasage= -fabs(dephasage);
+			}
+		}
+
+		/*
+		uint8_t positive_values = 0; //number of positive phase shifts among the past 5 that we calculated
+		uint8_t zero_values = 0;
+		Buffer_dephasage[dephasage_index] = dephasage;
+		for(uint8_t i = 0; i < 4; ++i)
+		{
+			if(Buffer_dephasage[dephasage_index] > 0)
+			{
+				++positive_values;
+			}
+			else if(Buffer_dephasage[dephasage_index] == 0)
+			{
+				++zero_values;
+			}
+		}
+		if((positive_values > (3 - zero_values)) & dephasage < 0)
+		{
+			dephasage = -dephasage;
+		}
+		*/
+
 }
 
 void processAudioData(int16_t *data, uint16_t num_samples)

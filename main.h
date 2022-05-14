@@ -9,8 +9,8 @@ extern "C" {
 #include "msgbus/messagebus.h"
 #include "parameter/parameter.h"
 
-#define ROTATION_THRESHOLD		0.3f
-#define ROTATION_COEFF			170     // convert rotation speed to be between 100 and 300
+#define ROTATION_THRESHOLD		0.15f
+#define ROTATION_COEFF			200     // convert rotation speed to be between 100 and 300
 #define PXTOCM					1570.0f //experimental value
 #define ERROR_THRESHOLD			15000
 #define KP						700.0f
