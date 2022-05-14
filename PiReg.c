@@ -35,8 +35,10 @@ int16_t Pi_Reg(float amplitude, float goal)
 	{
 		return 0;
 	}
+
 	int32_t error1 = (int32_t) error;
 	error1 /= correction;
+
 	if(MOVE)
 	{
 		sum_error += error1;
@@ -80,31 +82,29 @@ static THD_FUNCTION(PiRegulator, arg)
 
         FREQ = get_highest_index();
 
+        uint16_t a = FREQ;
+        uint16_t b = MOV_FREQ;
+        volatile float c = fabsf(speed_correction);
+        float d = ROTATION_THRESHOLD;
+        volatile unsigned int e = get_prox_front_right();
+        volatile unsigned int f = get_prox_front_left();
+
         //mainly for readability purposes
         MOVE = FREQ > MOV_FREQ;
-        bool no_obstacle_detected = (get_prox_mean_right() < prox_distance) & (get_prox_mean_left() < prox_distance);
-        bool obstacle_in_front = (get_prox_front_right() > prox_distance) || (get_prox_front_left() > prox_distance);
-        bool obstacle_left = ((get_prox_left() > prox_distance) & (speed_correction > ROTATION_THRESHOLD) & MOVE);
-        bool obstacle_right = ((get_prox_right() > prox_distance) & (speed_correction < -ROTATION_THRESHOLD) & MOVE);
+        volatile bool no_obstacle_detected = (get_prox_mean_right() < prox_distance) & (get_prox_mean_left() < prox_distance);
+        volatile bool obstacle_in_front = (get_prox_front_right() > prox_distance) || (get_prox_front_left() > prox_distance);
+        volatile bool obstacle_left = ((get_prox_left() > prox_distance) & (speed_correction > ROTATION_THRESHOLD) & MOVE);
+        volatile bool obstacle_right = ((get_prox_right() > prox_distance) & (speed_correction < -ROTATION_THRESHOLD) & MOVE);
         bool obstacle_on_side = (obstacle_left || obstacle_right);
         //bool obstacle_both_sides = ((get_prox_mean_left() > prox_distance) & (get_prox_mean_right() > prox_distance));
-
-        if(!MOVE || fabsf(speed_correction) < ROTATION_THRESHOLD)
-		{
-			speed_correction = 0;
-			turn = false;
-		}
 
         if(no_obstacle_detected & !obstacle_on_side)
         {
         	speed = Pi_Reg(get_highest_amplitude(), goal_amplitude);
 
-			if(turn)
-			{
-				speed_correction *= ROTATION_COEFF;
-				speed_correction = (int16_t) speed_correction;
-				speed = 0;
-			}
+			speed_correction *= ROTATION_COEFF;
+			speed_correction = (int16_t) speed_correction;
+			speed = 0;
 			set_body_led(1);//test
         }
         else if (obstacle_on_side)
@@ -127,6 +127,12 @@ static THD_FUNCTION(PiRegulator, arg)
 				speed = 0;
 				speed_correction = -prox_speed;
 			}
+		}
+
+        if(!MOVE || fabsf(speed_correction) < ROTATION_THRESHOLD)
+		{
+			speed_correction = 0;
+			speed = 0;
 		}
 
 		right_motor_set_speed(speed + speed_correction);
