@@ -1,9 +1,3 @@
-/*
- * PiReg.c
- *
- *  Created on: 5 May 2022
- *      Author: louis
- */
 #include "ch.h"
 #include "hal.h"
 #include <math.h>
@@ -18,7 +12,11 @@
 #include <Avoid_Obstacle.h>
 #include <leds.h>
 
-volatile static bool MOVE;
+volatile static bool MOVE = FALSE;
+volatile static bool OLD_MOVE = FALSE;
+//circular buffer
+static bool buffer_move[15] ;
+static uint8_t move_index = 0;
 
 //PI regulator implementation
 int16_t Pi_Reg(float amplitude, float goal)
@@ -33,6 +31,7 @@ int16_t Pi_Reg(float amplitude, float goal)
 
 	if(fabsf(error) < ERROR_THRESHOLD)
 	{
+		//set_body_led(1);
 		return 0;
 	}
 
@@ -45,6 +44,7 @@ int16_t Pi_Reg(float amplitude, float goal)
 	}
 	else
 	{
+		//set_body_led(1);
 		return 0;
 	}
 
@@ -74,6 +74,10 @@ static THD_FUNCTION(PiRegulator, arg)
     volatile int16_t speed = 0;
     volatile float speed_correction = 0;
     volatile uint16_t FREQ = 0;
+    static bool MOVE1=true;
+    uint8_t count_false = 0;
+
+
 
     while(1)
     {
@@ -82,29 +86,33 @@ static THD_FUNCTION(PiRegulator, arg)
         speed_correction = get_dephasage();
 
         FREQ = get_highest_index();
+
         /*
         uint16_t a = FREQ;
         uint16_t b = MOV_FREQ;
         volatile float c = fabsf(speed_correction);
         float d = ROTATION_THRESHOLD;
-
         volatile unsigned int e = get_prox_front_right();
         volatile unsigned int f = get_prox_front_left();
         */
 
         //mainly for readability purposes
         MOVE = FREQ > MOV_FREQ;
-        volatile bool no_obstacle_detected = ((get_prox_mean_right() < prox_distance_front) & (get_prox_mean_left() < prox_distance_front));
-        volatile bool obstacle_in_front = ((get_prox_front_right() > prox_distance_front) || (get_prox_front_left() > prox_distance_front));
-        volatile bool obstacle_left = ((get_prox_left() > prox_distance_side) & (speed_correction > ROTATION_THRESHOLD));
-        volatile bool obstacle_right = ((get_prox_right() > prox_distance_side) & (speed_correction < -ROTATION_THRESHOLD));
+        volatile bool no_obstacle_detected = ((get_prox_mean_right() < prox_distance) & (get_prox_mean_left() < prox_distance));
+        volatile bool obstacle_in_front = ((get_prox_front_right() > prox_distance) || (get_prox_front_left() > prox_distance));
+        volatile bool obstacle_left = ((get_prox_left() > prox_distance) & (speed_correction > ROTATION_THRESHOLD) & MOVE);
+        volatile bool obstacle_right = ((get_prox_right() > prox_distance) & (speed_correction < -ROTATION_THRESHOLD) & MOVE);
         bool obstacle_on_side = (obstacle_left || obstacle_right);
         //bool obstacle_both_sides = ((get_prox_mean_left() > prox_distance) & (get_prox_mean_right() > prox_distance));
-
-        if(no_obstacle_detected & !obstacle_on_side & !obstacle_in_front)
+        if(!MOVE || (get_highest_amplitude() < MIN_VALUE_THRESHOLD))
+        {
+        	speed=0;
+        	speed_correction=0;
+        }
+        else if(no_obstacle_detected & !obstacle_on_side)
         {
         	speed = Pi_Reg(get_highest_amplitude(), goal_amplitude);
-
+        	if (speed == 0){set_body_led(1);}
         	if(fabsf(speed_correction) < ROTATION_THRESHOLD)
 			{
 				speed_correction = 0;
@@ -125,55 +133,42 @@ static THD_FUNCTION(PiRegulator, arg)
 			}
 
 			set_body_led(0);//test
+			set_front_led(0);
         }
-        else if (obstacle_on_side & !obstacle_in_front)
-        {
-        	//the obstacle is on the side
-        	if (get_prox_right() > prox_distance_side)
-        	{
-        		speed = 0;
-        		speed_correction = -prox_speed;
-        	}
-        	if (get_prox_right() > prox_distance_side)
-			{
-				speed = 0;
-				speed_correction = prox_speed;
-			}
-        	else
-        	{
-				speed = prox_speed;
-				speed_correction = 0;
-        	}
-        	set_body_led(0);//test
+        else if (get_prox_front_right() < get_prox_right() || get_prox_front_left() < get_prox_left()){
+        	speed = 600;
+        	speed_correction=0;
         }
-        else if(obstacle_in_front)
-        {
-			if (get_prox_front_right() > prox_distance_front)
-			{
-				speed = 0;
-				speed_correction = -prox_speed;
-			}
-			else if (get_prox_front_right() > prox_distance_front)
-			{
-				speed = 0;
-				speed_correction = prox_speed;
-			}
-			set_body_led(1);//test
-		}
-        /*
-        else
-        {
-        	speed = 0;
-        	speed_correction = 0;
-        }
-        */
 
-        //if(!MOVE || (get_highest_amplitude() < 2*MIN_VALUE_THRESHOLD))   //Mode 2
-		if(!MOVE || (get_highest_amplitude() < MIN_VALUE_THRESHOLD))
-		{
-			speed = 0;
-			speed_correction= 0;
+        else if (obstacle_on_side || obstacle_in_front)
+        {
+        	speed = 500;
+        	if(get_prox_right()>get_prox_left()){
+        		speed_correction = -get_prox(0)*2-(get_prox(1)+get_prox(2))/2-get_prox(3)*2;
+        	}
+        	else if (get_prox_right()<get_prox_left()){
+        		speed_correction = get_prox(7)*2 + (get_prox(6)+get_prox(5))/2 + get_prox(4)*2;
+        	}
+
+        }
+
+		if(MOVE){
+			OLD_MOVE= true;
+		}else{
+			OLD_MOVE=false;
 		}
+		/*buffer_move[move_index]=MOVE;
+		move_index++;
+		if(move_index > 14)
+		{
+			move_index = 0;
+
+		}
+		for(uint8_t j=0;j<14;++j){
+			if(!buffer_move[j]){
+				count_false++;
+			}
+		}*/
 
 		right_motor_set_speed(speed - speed_correction);
 		left_motor_set_speed(speed + speed_correction);
@@ -187,6 +182,3 @@ void pi_regulator_start(void)
 {
 	chThdCreateStatic(waPiRegulator, sizeof(waPiRegulator), NORMALPRIO, PiRegulator, NULL);
 }
-
-
-
