@@ -16,7 +16,9 @@
 #include <PiReg.h>
 #include <audio_processing.h>
 #include <Avoid_Obstacle.h>
+#include <leds.h>
 
+static bool MOVE;
 
 //PI regulator implementation
 int16_t Pi_Reg(float amplitude, float goal)
@@ -29,13 +31,13 @@ int16_t Pi_Reg(float amplitude, float goal)
 
 	error = goal - amplitude;
 
-	if((fabs(error) < ERROR_THRESHOLD) || (get_back_amplitude() > get_front_amplitude()))
+	if((fabsf(error) < ERROR_THRESHOLD) || (get_back_amplitude() > get_front_amplitude()))
 	{
 		return 0;
 	}
 	int32_t error1 = (int32_t) error;
 	error1 /= correction;
-	if(get_highest_index()>MOV_FREQ)
+	if(MOVE)
 	{
 		sum_error += error1;
 	}
@@ -63,45 +65,54 @@ static THD_FUNCTION(PiRegulator, arg)
     (void)arg;
 
     systime_t time;
-    time = chVTGetSystemTime();
 
     int16_t speed = 0;
-    int16_t speed_correction = 0;
+    float speed_correction = 0;
+    bool turn = true;
+    uint16_t FREQ = 0;
 
     while(1)
     {
         time = chVTGetSystemTime();
 
         speed_correction = get_dephasage();
+        turn = true;
+
+        FREQ = get_highest_index();
 
         //mainly for readability purposes
+        MOVE = FREQ > MOV_FREQ;
         bool no_obstacle_detected = (get_prox_mean_right() < prox_distance) & (get_prox_mean_left() < prox_distance);
         bool obstacle_in_front = (get_prox_front_right() > prox_distance) || (get_prox_front_left() > prox_distance);
-        bool obstacle_left = ((get_prox_right() < prox_distance) & (speed_correction > ROTATION_THRESHOLD));
-        bool obstacle_right = ((get_prox_left() < prox_distance) & (speed_correction < -ROTATION_THRESHOLD));
+        bool obstacle_left = ((get_prox_left() > prox_distance) & (speed_correction > ROTATION_THRESHOLD) & MOVE);
+        bool obstacle_right = ((get_prox_right() > prox_distance) & (speed_correction < -ROTATION_THRESHOLD) & MOVE);
         bool obstacle_on_side = (obstacle_left || obstacle_right);
+        //bool obstacle_both_sides = ((get_prox_mean_left() > prox_distance) & (get_prox_mean_right() > prox_distance));
 
-        if(no_obstacle_detected)
+        if(!MOVE || fabsf(speed_correction) < ROTATION_THRESHOLD)
+		{
+			speed_correction = 0;
+			turn = false;
+		}
+
+        if(no_obstacle_detected & !obstacle_on_side)
         {
         	speed = Pi_Reg(get_highest_amplitude(), goal_amplitude);
 
-			if(get_highest_index() < MOV_FREQ || abs(speed_correction) < ROTATION_THRESHOLD)
-			{
-				speed_correction = 0;
-			}
-			else
+			if(turn)
 			{
 				speed_correction *= ROTATION_COEFF;
 				speed_correction = (int16_t) speed_correction;
+				speed = 0;
 			}
-			set_body_led(1);
+			set_body_led(1);//test
         }
         else if (obstacle_on_side)
         {
         	//the obstacle is on the side
         	speed = prox_speed;
         	speed_correction = 0;
-        	set_body_led(0);
+        	set_body_led(0);//test
         }
         else if(obstacle_in_front)
         {
