@@ -71,7 +71,7 @@ static THD_FUNCTION(PiRegulator, arg)
 
     systime_t time;
 
-    int16_t speed = 0;
+    volatile int16_t speed = 0;
     volatile float speed_correction = 0;
     volatile uint16_t FREQ = 0;
 
@@ -115,12 +115,14 @@ static THD_FUNCTION(PiRegulator, arg)
 				//speed_correction *= ROTATION_COEFF;
 				//speed_correction = (int16_t) speed_correction + ROTATION_COEFF;
 				speed_correction = ROTATION_COEFF;
+				//speed = 0;  //Mode 2
 			}
 			else if(speed_correction < 0)
 			{
 				//speed_correction *= ROTATION_COEFF;
 				//speed_correction = (int16_t) speed_correction - ROTATION_COEFF;
 				speed_correction = -ROTATION_COEFF;
+				//speed = 0;   //Mode 2
 			}
 
 			set_body_led(0);//test
@@ -130,7 +132,7 @@ static THD_FUNCTION(PiRegulator, arg)
         	//the obstacle is on the side
         	speed = prox_speed;
         	speed_correction = 0;
-        	set_body_led(0);//test
+        	set_body_led(1);//test
         }
         else if(obstacle_in_front)
         {
@@ -144,7 +146,7 @@ static THD_FUNCTION(PiRegulator, arg)
 				speed = 0;
 				speed_correction = -prox_speed;
 			}
-			set_body_led(0);//test
+			set_body_led(1);//test
 		}
         else
         {
@@ -152,7 +154,8 @@ static THD_FUNCTION(PiRegulator, arg)
         	speed_correction = 0;
         }
 
-		if(!MOVE || (speed == 0) || (get_highest_amplitude() < 2*MIN_VALUE_THRESHOLD))
+        //if(!MOVE || (get_highest_amplitude() < 2*MIN_VALUE_THRESHOLD))   //Mode 2
+		if(!MOVE || (speed == 0) || (get_highest_amplitude() < MIN_VALUE_THRESHOLD))
 		{
 			speed = 0;
 			speed_correction= 0;

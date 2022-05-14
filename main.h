@@ -20,7 +20,7 @@ extern "C" {
 #define goal_amplitude 			120000
 #define turn_around 			800
 #define correction 				10000
-#define speed_conversion 		4  		//convert the speed given by the pi_regulator to be between 400 and 800
+#define speed_conversion 		8  		//convert the speed given by the pi_regulator to be between 400 and 800
 #define prox_distance			100
 #define prox_speed				600
 #define PHASE_THRESHOLD			4.5f	//Phase threshold
