@@ -25,8 +25,6 @@ static float micRight_output[FFT_SIZE];
 static float micFront_output[FFT_SIZE];
 static float micBack_output[FFT_SIZE];
 
-#define MIN_VALUE_THRESHOLD 10000
-
 #define MIN_FREQ 30
 #define MAX_FREQ 40
 
@@ -159,7 +157,7 @@ void phase_calculation(void)
 
 		MaxNormIndex_cmplx_right = highest_index_right_test + 1;
 
-		if(highest_amp_right > 2*MIN_VALUE_THRESHOLD)
+		if(highest_amp_right > MIN_VALUE_THRESHOLD)
 		{
 			phase_right = atan2(micRight_cmplx_input[MaxNormIndex_cmplx_right],micRight_cmplx_input[highest_index_right_test]);
 			phase_left = atan2(micLeft_cmplx_input[MaxNormIndex_cmplx_right],micLeft_cmplx_input[highest_index_right_test]);

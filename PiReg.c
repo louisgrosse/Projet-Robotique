@@ -31,7 +31,7 @@ int16_t Pi_Reg(float amplitude, float goal)
 
 	error = goal - amplitude;
 
-	if((fabsf(error) < ERROR_THRESHOLD) || (get_back_amplitude() > get_front_amplitude()))
+	if(fabsf(error) < ERROR_THRESHOLD)
 	{
 		return 0;
 	}
@@ -48,9 +48,12 @@ int16_t Pi_Reg(float amplitude, float goal)
 		return 0;
 	}
 
-	if(sum_error > MAX_SUM_ERROR){
+	if(sum_error > MAX_SUM_ERROR)
+	{
 		sum_error = MAX_SUM_ERROR;
-	}else if(sum_error < -MAX_SUM_ERROR){
+	}
+	else if(sum_error < -MAX_SUM_ERROR)
+	{
 		sum_error = -MAX_SUM_ERROR;
 	}
 
@@ -120,7 +123,6 @@ static THD_FUNCTION(PiRegulator, arg)
 				speed_correction = -ROTATION_COEFF;
 			}
 
-			speed = 0;
 			set_body_led(0);//test
         }
         else if (obstacle_on_side)
@@ -150,7 +152,7 @@ static THD_FUNCTION(PiRegulator, arg)
         	speed_correction = 0;
         }
 
-		if(!MOVE)
+		if(!MOVE || (speed == 0) || (get_highest_amplitude() < 2*MIN_VALUE_THRESHOLD))
 		{
 			speed = 0;
 			speed_correction= 0;
