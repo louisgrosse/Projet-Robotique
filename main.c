@@ -77,6 +77,8 @@ int main(void)
     motors_init();
     //inits proximity sensors
     proximity_start();
+    //calibrate_ir();
+
 
     messagebus_init(&bus, &bus_lock, &bus_condvar);
 

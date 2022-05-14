@@ -39,5 +39,7 @@ float get_back_amplitude(void);
 float get_highest_amplitude(void);
 uint16_t get_highest_index(void);
 float get_dephasage(void);
+//void start_phase(void);
+void phase_calculation(void);
 
 #endif /* AUDIO_PROCESSING_H */
