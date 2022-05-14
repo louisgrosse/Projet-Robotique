@@ -12,11 +12,7 @@
 #include <Avoid_Obstacle.h>
 #include <leds.h>
 
-volatile static bool MOVE = FALSE;
-volatile static bool OLD_MOVE = FALSE;
-//circular buffer
-static bool buffer_move[15] ;
-static uint8_t move_index = 0;
+static bool MOVE = FALSE;
 
 //PI regulator implementation
 int16_t Pi_Reg(float amplitude, float goal)
@@ -71,11 +67,9 @@ static THD_FUNCTION(PiRegulator, arg)
 
     systime_t time;
 
-    volatile int16_t speed = 0;
-    volatile float speed_correction = 0;
-    volatile uint16_t FREQ = 0;
-    static bool MOVE1=true;
-    uint8_t count_false = 0;
+    int16_t speed = 0;
+    float speed_correction = 0;
+    uint16_t FREQ = 0;
 
 
 
@@ -98,12 +92,12 @@ static THD_FUNCTION(PiRegulator, arg)
 
         //mainly for readability purposes
         MOVE = FREQ > MOV_FREQ;
-        volatile bool no_obstacle_detected = ((get_prox_mean_right() < prox_distance) & (get_prox_mean_left() < prox_distance));
-        volatile bool obstacle_in_front = ((get_prox_front_right() > prox_distance) || (get_prox_front_left() > prox_distance));
-        volatile bool obstacle_left = ((get_prox_left() > prox_distance) & (speed_correction > ROTATION_THRESHOLD) & MOVE);
-        volatile bool obstacle_right = ((get_prox_right() > prox_distance) & (speed_correction < -ROTATION_THRESHOLD) & MOVE);
+        bool no_obstacle_detected = ((get_prox_mean_right() < prox_distance) & (get_prox_mean_left() < prox_distance));
+        bool obstacle_in_front = ((get_prox_front_right() > prox_distance) || (get_prox_front_left() > prox_distance));
+        bool obstacle_left = ((get_prox_left() > prox_distance) & (speed_correction > ROTATION_THRESHOLD) & MOVE);
+        bool obstacle_right = ((get_prox_right() > prox_distance) & (speed_correction < -ROTATION_THRESHOLD) & MOVE);
         bool obstacle_on_side = (obstacle_left || obstacle_right);
-        //bool obstacle_both_sides = ((get_prox_mean_left() > prox_distance) & (get_prox_mean_right() > prox_distance));
+
         if(!MOVE || (get_highest_amplitude() < MIN_VALUE_THRESHOLD))
         {
         	speed=0;
@@ -112,63 +106,53 @@ static THD_FUNCTION(PiRegulator, arg)
         else if(no_obstacle_detected & !obstacle_on_side)
         {
         	speed = Pi_Reg(get_highest_amplitude(), goal_amplitude);
-        	if (speed == 0){set_body_led(1);}
+
         	if(fabsf(speed_correction) < ROTATION_THRESHOLD)
 			{
 				speed_correction = 0;
 			}
 			else if(speed_correction >= 0)
 			{
-				//speed_correction *= ROTATION_COEFF;
-				//speed_correction = (int16_t) speed_correction + ROTATION_COEFF;
 				speed_correction = ROTATION_COEFF;
 				//speed = 0;  //Mode 2
 			}
 			else if(speed_correction < 0)
 			{
-				//speed_correction *= ROTATION_COEFF;
-				//speed_correction = (int16_t) speed_correction - ROTATION_COEFF;
 				speed_correction = -ROTATION_COEFF;
 				//speed = 0;   //Mode 2
 			}
 
 			set_body_led(0);//test
-			set_front_led(0);
         }
-        else if (get_prox_front_right() < get_prox_right() || get_prox_front_left() < get_prox_left()){
-        	speed = 600;
-        	speed_correction=0;
+        else if (get_prox_front_right() < get_prox_right() || get_prox_front_left() < get_prox_left())
+        {
+        	speed = prox_speed;
+        	if(get_prox_front_right > prox_distance)
+        	{
+        		speed_correction = prox_speed;
+        	}
+        	else if(get_prox_front_left > prox_distance)
+        	{
+        		speed_correction = prox_speed;
+        	}
+        	else
+        	{
+        		speed_correction = 0;
+        	}
         }
-
         else if (obstacle_on_side || obstacle_in_front)
         {
-        	speed = 500;
-        	if(get_prox_right()>get_prox_left()){
-        		speed_correction = -get_prox(0)*2-(get_prox(1)+get_prox(2))/2-get_prox(3)*2;
+        	speed = 400;
+        	if(get_prox_right() >= get_prox_left())
+        	{
+        		speed_correction = -get_prox_front_right()*2-(get_prox_side_right()+get_prox_right())/2-get_prox_back_right();
         	}
-        	else if (get_prox_right()<get_prox_left()){
-        		speed_correction = get_prox(7)*2 + (get_prox(6)+get_prox(5))/2 + get_prox(4)*2;
+        	else
+        	{
+        		speed_correction = get_prox_front_left()*2 + (get_prox_side_left()+get_prox_left())/2 + get_prox_back_left();
         	}
 
         }
-
-		if(MOVE){
-			OLD_MOVE= true;
-		}else{
-			OLD_MOVE=false;
-		}
-		/*buffer_move[move_index]=MOVE;
-		move_index++;
-		if(move_index > 14)
-		{
-			move_index = 0;
-
-		}
-		for(uint8_t j=0;j<14;++j){
-			if(!buffer_move[j]){
-				count_false++;
-			}
-		}*/
 
 		right_motor_set_speed(speed - speed_correction);
 		left_motor_set_speed(speed + speed_correction);

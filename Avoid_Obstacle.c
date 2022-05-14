@@ -13,6 +13,8 @@
 
 static unsigned int prox_front_right = 0;
 static unsigned int prox_front_left = 0;
+static unsigned int prox_back_right = 0;
+static unsigned int prox_back_left = 0;
 static unsigned int prox_mean_right = 0;
 static unsigned int prox_mean_left = 0;
 static unsigned int prox_right = 0;
@@ -52,36 +54,44 @@ static THD_FUNCTION(AvoidObstacle, arg) {
     	prox_test6 = get_calibrated_prox(6);
     	prox_test7 = get_calibrated_prox(7);
 
-    	if(prox_test0 > correction)
+    	/*
+    	if(prox_test0 > 10*correction)
     	{
     		prox_test0 = prox_front_right;
     	}
-    	if(prox_test1 > correction)
+    	if(prox_test1 > 10*correction)
 		{
 			prox_test1 = prox_side_right;
 		}
-    	if(prox_test2 > correction)
+    	if(prox_test2 > 10*correction)
 		{
 			prox_test2 = prox_right;
 		}
-    	if(prox_test5 > correction)
+    	if(prox_test5 > 10*correction)
 		{
 			prox_test5 = prox_left;
 		}
-    	if(prox_test6 > correction)
+    	if(prox_test6 > 10*correction)
 		{
 			prox_test6 = prox_side_left;
 		}
-    	if(prox_test7 > correction)
+    	if(prox_test7 > 10*correction)
 		{
 			prox_test7 = prox_front_left;
 		}
+		*/
+
+    	prox_back_right = get_prox(4);
+    	prox_back_left = get_prox(5);
 
     	prox_front_right = prox_test0;
-		prox_front_left = prox_test6;
+		prox_front_left = prox_test7;
 
 		prox_mean_right = (prox_test1+prox_test0)/2; //mean between the 2 front right sensors
-		prox_mean_left = (prox_test7+get_prox(6))/2;  //mean between the 2 front left sensors
+		prox_mean_left = (prox_test7+prox_test6)/2;  //mean between the 2 front left sensors
+
+		prox_side_right = prox_test1;
+		prox_side_left = prox_test6;
 
 		prox_left = prox_test5;
 		prox_right = prox_test2;
@@ -112,6 +122,16 @@ unsigned int get_prox_front_left(void)
 	return prox_front_left;
 }
 
+unsigned int get_prox_back_right(void)
+{
+	return prox_back_right;
+}
+
+unsigned int get_prox_back_left(void)
+{
+	return prox_back_left;
+}
+
 unsigned int get_prox_mean_right(void)
 {
 	return prox_mean_right;
@@ -120,6 +140,16 @@ unsigned int get_prox_mean_right(void)
 unsigned int get_prox_mean_left(void)
 {
 	return prox_mean_left;
+}
+
+unsigned int get_prox_side_right(void)
+{
+	return prox_side_right;
+}
+
+unsigned int get_prox_side_left(void)
+{
+	return prox_side_left;
 }
 
 unsigned int get_prox_right(void)
@@ -134,5 +164,5 @@ unsigned int get_prox_left(void)
 
 void avoid_obstacle_start(void)
 {
-	chThdCreateStatic(waAvoidObstacle, sizeof(waAvoidObstacle), NORMALPRIO, AvoidObstacle, NULL);
+	chThdCreateStatic(waAvoidObstacle, sizeof(waAvoidObstacle), NORMALPRIO + 1, AvoidObstacle, NULL);
 }

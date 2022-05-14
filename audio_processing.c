@@ -25,8 +25,10 @@ static float micRight_output[FFT_SIZE];
 static float micFront_output[FFT_SIZE];
 static float micBack_output[FFT_SIZE];
 
-#define MIN_FREQ 30
-#define MAX_FREQ 40
+#define MIN_FREQ 		80
+#define MAX_FREQ 		90
+#define MIN_FREQ_LOW	20
+#define MAX_FREQ_LOW	30
 
 //Highest amplitudes of the mics
 static float highest_amp_left = MIN_VALUE_THRESHOLD;
@@ -54,82 +56,8 @@ static float dephasage = 0;
 *	uint16_t num_samples	Tells how many data we get in total (should always be 640)
 */
 
-//static THD_WORKING_AREA(waFollowSound, 1024);
-//static THD_FUNCTION(FollowSound, arg) {
-
-/*
 void phase_calculation(void)
 {
-
-	 	 //chRegSetThreadName(__FUNCTION__);
-	   //(void)arg;
-
-		float max_norm_right = MIN_VALUE_THRESHOLD;
-		float max_norm_left = MIN_VALUE_THRESHOLD;
-
-		int16_t MaxNormIndex_real_right = -1; //index of the reel part of frequency with the highest amplitude of the right sensor
-		int16_t MaxNormIndex_real_left = -1; //index of the reel part of frequency with the highest amplitude of the left sensor
-		int16_t MaxNormIndex_cmplx_right = -1; //index of the imaginary part of frequency with the highest amplitude of the right sensor
-		int16_t MaxNormIndex_cmplx_left = -1; //index of the imaginary part of frequency with the highest amplitude of the left sensor
-		double phase_right = 0;
-		double phase_left = 0;
-
-		 time = chVTGetSystemTime();
-		//search for the highest peak
-		for(uint16_t i = 20 ; i <= 50 ; i++)
-		{
-			if(micRight_output[i] > max_norm_right)
-			{
-				max_norm_right = micRight_output[i];
-				MaxNormIndex_real_right = i;
-			}
-
-			if(micLeft_output[i] > max_norm_left)
-			{
-				max_norm_left = micLeft_output[i];
-				MaxNormIndex_real_left = i;
-			}
-		}
-
-		//max_norm_left = micLeft_output[MaxNormIndex_real_right];
-
-		if(MaxNormIndex_real_right!=0)
-		{
-			MaxNormIndex_real_right*=2;
-		}
-
-		if(MaxNormIndex_real_right!=0)
-		{
-			MaxNormIndex_real_left*=2;
-		}
-
-		MaxNormIndex_cmplx_right = MaxNormIndex_real_right + 1;
-		MaxNormIndex_cmplx_left = MaxNormIndex_real_left + 1;
-
-		if((max_norm_right>2*MIN_VALUE_THRESHOLD) || (max_norm_left>2*MIN_VALUE_THRESHOLD))
-		{
-			phase_right = atan2(micRight_cmplx_input[MaxNormIndex_cmplx_right],micRight_cmplx_input[MaxNormIndex_real_right]);
-			phase_left = atan2(micLeft_cmplx_input[MaxNormIndex_cmplx_left],micLeft_cmplx_input[MaxNormIndex_real_left]);
-			dephasage = phase_right-phase_left;
-		}
-}
-*/
-
-void phase_calculation(void)
-{
-
-	 	 //chRegSetThreadName(__FUNCTION__);
-	   //(void)arg;
-
-		//circular buffer
-		/*
-		static double Buffer_dephasage[5] ;
-		static uint8_t dephasage_index = 0;
-		if(dephasage_index > 4)
-		{
-			dephasage_index = 0;
-		}
-		*/
 
 		//phase of the right and left microphones
 		static double last_dephasage = 0;
@@ -175,27 +103,6 @@ void phase_calculation(void)
 			  dephasage= -fabs(dephasage);
 			}
 		}
-
-		/*
-		uint8_t positive_values = 0; //number of positive phase shifts among the past 5 that we calculated
-		uint8_t zero_values = 0;
-		Buffer_dephasage[dephasage_index] = dephasage;
-		for(uint8_t i = 0; i < 4; ++i)
-		{
-			if(Buffer_dephasage[dephasage_index] > 0)
-			{
-				++positive_values;
-			}
-			else if(Buffer_dephasage[dephasage_index] == 0)
-			{
-				++zero_values;
-			}
-		}
-		if((positive_values > (3 - zero_values)) & dephasage < 0)
-		{
-			dephasage = -dephasage;
-		}
-		*/
 
 }
 
@@ -324,6 +231,30 @@ void sound_processing(float* data_right,float* data_left,float* data_back,float*
 		}
 	}
 
+	for(uint16_t i = MIN_FREQ_LOW ; i <= MAX_FREQ_LOW ; i++)
+		{
+			if(data_right[i] > highest_amp_right)
+			{
+				highest_index_right = i;
+				highest_amp_right = data_right[i];
+			}
+			if(data_left[i] > highest_amp_left)
+			{
+				highest_index_left = i;
+				highest_amp_left = data_left[i];
+			}
+			if(data_back[i] > highest_amp_back)
+			{
+				highest_index_back = i;
+				highest_amp_back = data_back[i];
+			}
+			if(data_front[i] > highest_amp_front)
+			{
+				highest_index_front = i;
+				highest_amp_front = data_front[i];
+			}
+		}
+
 	//we search the highest amplitude between the 4 mics
 	if((highest_amp_front > highest_amp_back) & (highest_amp_front > highest_amp_left) & (highest_amp_front > highest_amp_right))
 	{
@@ -345,18 +276,6 @@ void sound_processing(float* data_right,float* data_left,float* data_back,float*
 		highest_amplitude = highest_amp_right;
 		highest_index = highest_index_right;
 	}
-
-	//mean of the 4 mics
-	//highest_index = (int16_t)(highest_index_right+highest_index_left+highest_index_back+highest_index_front)/4;
-	//mean on 2 samples to smoothen the movements
-	//if(abs(old_highest_index - highest_index) < 5)
-	//{
-	//	old_highest_index = highest_index;
-	//}
-
-	//highest_index = (int16_t) ((highest_index+old_highest_index)/2);
-	//old_highest_index = highest_index;
-
 }
 
 float get_right_amplitude(void)
