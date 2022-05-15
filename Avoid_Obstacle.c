@@ -36,6 +36,8 @@ static THD_FUNCTION(AvoidObstacle, arg) {
     unsigned int prox_test0 = 0;
     unsigned int prox_test1 = 0;
     unsigned int prox_test2 = 0;
+    unsigned int prox_test3 = 0;
+    unsigned int prox_test4 = 0;
     unsigned int prox_test5 = 0;
     unsigned int prox_test6 = 0;
     unsigned int prox_test7 = 0;
@@ -50,6 +52,8 @@ static THD_FUNCTION(AvoidObstacle, arg) {
     	prox_test0 = get_calibrated_prox(0);
     	prox_test1 = get_calibrated_prox(1);
     	prox_test2 = get_calibrated_prox(2);
+    	prox_test3 = get_calibrated_prox(3);
+    	prox_test4 = get_calibrated_prox(4);
     	prox_test5 = get_calibrated_prox(5);
     	prox_test6 = get_calibrated_prox(6);
     	prox_test7 = get_calibrated_prox(7);
@@ -83,14 +87,15 @@ static THD_FUNCTION(AvoidObstacle, arg) {
 		*/
 
 
-    	prox_back_right = get_prox(4);
-    	prox_back_left = get_prox(5);
+    	prox_back_right = prox_test3;
+    	prox_back_left = prox_test4;
 
     	prox_front_right = prox_test0;
 		prox_front_left = prox_test7;
 
-		prox_mean_right = (prox_test1+prox_test0)/2; //mean between the 2 front right sensors
-		prox_mean_left = (prox_test7+prox_test6)/2;  //mean between the 2 front left sensors
+		prox_mean_right = (2*prox_test2 + prox_test1)/3; //mean between the 2 front right sensors
+		prox_mean_left = (2*prox_test5 + prox_test6)/3;  //mean between the 2 front left sensors
+
 
 		prox_side_right = prox_test1;
 		prox_side_left = prox_test6;
