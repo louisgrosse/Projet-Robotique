@@ -28,7 +28,7 @@ static float micBack_output[FFT_SIZE];
 #define MIN_FREQ 		80
 #define MAX_FREQ 		90
 #define MIN_FREQ_LOW	20
-#define MAX_FREQ_LOW	30
+#define MAX_FREQ_LOW	60
 
 //Highest amplitudes of the mics
 static float highest_amp_left = MIN_VALUE_THRESHOLD;
@@ -206,7 +206,8 @@ void sound_processing(float* data_right,float* data_left,float* data_back,float*
 	highest_amp_front = MIN_VALUE_THRESHOLD;
 	highest_amp_back = MIN_VALUE_THRESHOLD;
 
-	//we search the frequency of the highest amplitude of each mics
+	//we search the frequency of the highest amplitude of each mics for a high frequency between 20 and 30
+	// and for a frequency between 80 and 90 to avoid using too much ressources;
 	for(uint16_t i = MIN_FREQ ; i <= MAX_FREQ ; i++)
 	{
 		if(data_right[i] > highest_amp_right)
@@ -255,7 +256,8 @@ void sound_processing(float* data_right,float* data_left,float* data_back,float*
 			}
 		}
 
-	//we search the highest amplitude between the 4 mics
+
+	//we search the highest amplitude of all 4 mics
 	if((highest_amp_front > highest_amp_back) & (highest_amp_front > highest_amp_left) & (highest_amp_front > highest_amp_right))
 	{
 		highest_amplitude = highest_amp_front;
@@ -278,6 +280,7 @@ void sound_processing(float* data_right,float* data_left,float* data_back,float*
 	}
 }
 
+// getters used to communicate with the PI Regulator
 float get_right_amplitude(void)
 {
 	return highest_amp_right;
