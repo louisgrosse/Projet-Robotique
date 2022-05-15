@@ -11,13 +11,14 @@
 #include <audio_processing.h>
 #include <Avoid_Obstacle.h>
 #include <leds.h>
+#include <selector.h>
 
 static bool MOVE = FALSE;
-/*
-#define counter_size	30
-#define MIN_THRESHOLD	(2*counter_size)/3
-#define MAX_THRESHOLD	counter_size/3
-*/
+
+//#define counter_size	128
+//#define MIN_THRESHOLD	(3*counter_size)/4
+//#define MAX_THRESHOLD	counter_size/2
+
 
 //PI regulator implementation
 int16_t Pi_Reg(float amplitude, float goal)
@@ -32,7 +33,6 @@ int16_t Pi_Reg(float amplitude, float goal)
 
 	if(fabsf(error) < ERROR_THRESHOLD)
 	{
-		//set_body_led(1);
 		return 0;
 	}
 
@@ -45,7 +45,6 @@ int16_t Pi_Reg(float amplitude, float goal)
 	}
 	else
 	{
-		//set_body_led(1);
 		return 0;
 	}
 
@@ -75,7 +74,8 @@ static THD_FUNCTION(PiRegulator, arg)
     int16_t speed = 0;
     float speed_correction = 0;
     uint16_t FREQ = 0;
-    //uint16_t true_counter = 0;
+//    uint16_t true_counter = 0;
+//    static bool  MOVE_FREQ = FALSE;
 
 
     while(1)
@@ -86,25 +86,35 @@ static THD_FUNCTION(PiRegulator, arg)
 
         FREQ = get_highest_index();
 
+//        MOVE_FREQ = (FREQ > MOV_FREQ);
         /*
-        if((FREQ > MOV_FREQ) & (true_counter < counter_size))
+        if(MOVE_FREQ & (true_counter < counter_size))
         {
-        	++true_counter;
+        	true_counter += 1;
         }
-        else if (true_counter > 0)
+        else if (true_counter > 3)
         {
-        	--true_counter;
+        	true_counter -= 4;
         }
 
         if(true_counter > MAX_THRESHOLD)
         {
-        	MOVE = TRUE;
+        	MOVE_FREQ = TRUE;
         }
         else if (true_counter < MIN_THRESHOLD)
         {
-        	MOVE = FALSE;
+        	MOVE_FREQ = FALSE;
         }
-        */
+
+        if(MOVE_FREQ)
+        {
+        	set_body_led(1);
+        }
+        else
+        {
+        	set_body_led(0);
+        }
+		*/
 
 
         /*
@@ -117,15 +127,16 @@ static THD_FUNCTION(PiRegulator, arg)
         */
 
         //mainly for readability purposes
-        MOVE = FREQ > MOV_FREQ;
+
+        MOVE = ((FREQ > MOV_FREQ) & (get_selector()>7) & (get_highest_amplitude() > MIN_VALUE_THRESHOLD));
 
         bool no_obstacle_detected = ((get_prox_mean_right() < prox_distance) & (get_prox_mean_left() < prox_distance));
         bool obstacle_in_front = ((get_prox_front_right() > prox_distance) || (get_prox_front_left() > prox_distance));
-        bool obstacle_left = ((get_prox_left() > prox_distance) & MOVE);
-        bool obstacle_right = ((get_prox_right() > prox_distance) & MOVE);
+        bool obstacle_left = (get_prox_left() > prox_distance);
+        bool obstacle_right = (get_prox_right() > prox_distance);
         bool obstacle_on_side = (obstacle_left || obstacle_right);
 
-        if(!MOVE || (get_highest_amplitude() < MIN_VALUE_THRESHOLD))
+        if(!MOVE)
         {
         	speed=0;
         	speed_correction=0;
@@ -168,7 +179,7 @@ static THD_FUNCTION(PiRegulator, arg)
         	{
         		speed_correction = 0;
         	}
-        	set_body_led(1);//test
+        	//set_body_led(1);//test
         }
         else if (obstacle_on_side || obstacle_in_front)
         {
@@ -181,7 +192,7 @@ static THD_FUNCTION(PiRegulator, arg)
         	{
         		speed_correction = get_prox_front_left()*2 + (get_prox_side_left()+get_prox_left())/2 + 2*get_prox_back_left();
         	}
-        	set_body_led(0);//test
+        	//set_body_led(0);//test
         }
 
 		right_motor_set_speed(speed - speed_correction);

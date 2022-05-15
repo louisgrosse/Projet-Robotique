@@ -55,6 +55,7 @@ static THD_FUNCTION(AvoidObstacle, arg) {
     	prox_test7 = get_calibrated_prox(7);
 
 
+    	/*
     	if(prox_test0 > 10*correction)
     	{
     		prox_test0 = prox_front_right;
@@ -79,6 +80,7 @@ static THD_FUNCTION(AvoidObstacle, arg) {
 		{
 			prox_test7 = prox_front_left;
 		}
+		*/
 
 
     	prox_back_right = get_prox(4);

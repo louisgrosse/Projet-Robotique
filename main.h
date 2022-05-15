@@ -16,9 +16,8 @@ extern "C" {
 #define KP						700.0f
 #define KI 						3.5f	//must not be zero
 #define MAX_SUM_ERROR 			(MOTOR_SPEED_LIMIT/KI)
-#define MOV_FREQ 				70
+#define MOV_FREQ 				75
 #define goal_amplitude 			140000
-#define turn_around 			800
 #define correction 				10000
 #define speed_conversion 		8  		//convert the speed given by the pi_regulator to be between 400 and 800
 #define prox_distance_front		125
