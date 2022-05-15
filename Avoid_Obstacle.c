@@ -33,12 +33,12 @@ static THD_FUNCTION(AvoidObstacle, arg) {
     messagebus_topic_t *prox_topic = messagebus_find_topic_blocking(&bus, "/proximity");
     proximity_msg_t prox_values;
 
-    volatile unsigned int prox_test0 = 0;
-    volatile unsigned int prox_test1 = 0;
-    volatile unsigned int prox_test2 = 0;
-    volatile unsigned int prox_test5 = 0;
-    volatile unsigned int prox_test6 = 0;
-    volatile unsigned int prox_test7 = 0;
+    unsigned int prox_test0 = 0;
+    unsigned int prox_test1 = 0;
+    unsigned int prox_test2 = 0;
+    unsigned int prox_test5 = 0;
+    unsigned int prox_test6 = 0;
+    unsigned int prox_test7 = 0;
     //set_body_led(1);
 
     while(1)
@@ -54,7 +54,7 @@ static THD_FUNCTION(AvoidObstacle, arg) {
     	prox_test6 = get_calibrated_prox(6);
     	prox_test7 = get_calibrated_prox(7);
 
-    	/*
+
     	if(prox_test0 > 10*correction)
     	{
     		prox_test0 = prox_front_right;
@@ -79,7 +79,7 @@ static THD_FUNCTION(AvoidObstacle, arg) {
 		{
 			prox_test7 = prox_front_left;
 		}
-		*/
+
 
     	prox_back_right = get_prox(4);
     	prox_back_left = get_prox(5);
@@ -96,16 +96,6 @@ static THD_FUNCTION(AvoidObstacle, arg) {
 		prox_left = prox_test5;
 		prox_right = prox_test2;
 
-    	/*
-    	prox_front_right = get_calibrated_prox(0);
-    	prox_front_left = get_calibrated_prox(6);
-
-    	prox_mean_right = (get_prox(1)+get_prox(0))/2; //mean between the 2 front right sensors
-    	prox_mean_left = (get_prox(7)+get_prox(6))/2;  //mean between the 2 front left sensors
-
-    	prox_left = get_calibrated_prox(5);
-    	prox_right = get_calibrated_prox(2);
-    	*/
 
     	chThdSleepUntilWindowed(time, time + MS2ST(10));
     }

@@ -141,13 +141,13 @@ static THD_FUNCTION(PiRegulator, arg)
 			else if(speed_correction >= 0)
 			{
 				//speed_correction = ROTATION_COEFF;
-				speed_correction = speed/2;
+				speed_correction = speed/3;
 				//speed = 0;  //Mode 2
 			}
 			else if(speed_correction < 0)
 			{
 				//speed_correction = -ROTATION_COEFF;
-				speed_correction = -speed/2;
+				speed_correction = -speed/3;
 				//speed = 0;   //Mode 2
 			}
 
@@ -156,11 +156,11 @@ static THD_FUNCTION(PiRegulator, arg)
         else if (get_prox_front_right() < get_prox_right() || get_prox_front_left() < get_prox_left())
         {
         	speed = prox_speed;
-        	if(get_prox_front_right() > (prox_distance/2))
+        	if(get_prox_front_right() > prox_distance)
         	{
-        		speed_correction = prox_speed;
+        		speed_correction = -prox_speed;
         	}
-        	else if(get_prox_front_left() > (prox_distance/2))
+        	else if(get_prox_front_left() > prox_distance)
         	{
         		speed_correction = prox_speed;
         	}
@@ -175,13 +175,13 @@ static THD_FUNCTION(PiRegulator, arg)
         	speed = ROTATION_COEFF;
         	if(get_prox_right() >= get_prox_left())
         	{
-        		speed_correction = -get_prox_front_right()*2-(get_prox_side_right()+get_prox_right())/2-get_prox_back_right();
+        		speed_correction = -get_prox_front_right()*2-(get_prox_side_right()+get_prox_right())/2-2*get_prox_back_right();
         	}
         	else
         	{
-        		speed_correction = get_prox_front_left()*2 + (get_prox_side_left()+get_prox_left())/2 + get_prox_back_left();
+        		speed_correction = get_prox_front_left()*2 + (get_prox_side_left()+get_prox_left())/2 + 2*get_prox_back_left();
         	}
-        	set_body_led(1);//test
+        	set_body_led(0);//test
         }
 
 		right_motor_set_speed(speed - speed_correction);
