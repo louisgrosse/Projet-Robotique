@@ -130,11 +130,12 @@ static THD_FUNCTION(PiRegulator, arg)
 
         MOVE = ((FREQ > MOV_FREQ) & (get_selector()>7) & (get_highest_amplitude() > MIN_VALUE_THRESHOLD));
 
-        bool no_obstacle_detected = ((get_prox_mean_right() < prox_distance) & (get_prox_mean_left() < prox_distance));
-        bool obstacle_in_front = ((get_prox_front_right() > prox_distance) || (get_prox_front_left() > prox_distance));
+		bool obstacle_in_front = ((get_prox_front_right() > prox_distance) || (get_prox_front_left() > prox_distance));
+        bool no_obstacle_detected = ((get_prox_mean_right() < prox_distance) & (get_prox_mean_left() < prox_distance) & !obstacle_in_front);
         bool obstacle_left = (get_prox_left() > prox_distance);
         bool obstacle_right = (get_prox_right() > prox_distance);
         bool obstacle_on_side = (obstacle_left || obstacle_right);
+        bool obstacle_in_back = ((get_prox_back_right() > prox_distance) || (get_prox_back_left() > prox_distance));;
 
         if(!MOVE)
         {
@@ -181,16 +182,16 @@ static THD_FUNCTION(PiRegulator, arg)
         	}
         	//set_body_led(1);//test
         }
-        else if (obstacle_on_side || obstacle_in_front)
+        else if (obstacle_on_side || obstacle_in_front || obstacle_in_back)
         {
         	speed = ROTATION_COEFF;
         	if(get_prox_right() >= get_prox_left())
         	{
-        		speed_correction = -get_prox_front_right()*2-(get_prox_side_right()+get_prox_right())/2-2*get_prox_back_right();
+        		speed_correction = -get_prox_front_right()*2-(get_prox_side_right()+get_prox_right())-2*get_prox_back_right();
         	}
         	else
         	{
-        		speed_correction = get_prox_front_left()*2 + (get_prox_side_left()+get_prox_left())/2 + 2*get_prox_back_left();
+        		speed_correction = get_prox_front_left()*2 + (get_prox_side_left()+get_prox_left()) + 2*get_prox_back_left();
         	}
         	//set_body_led(0);//test
         }
