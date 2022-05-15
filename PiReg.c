@@ -13,6 +13,11 @@
 #include <leds.h>
 
 static bool MOVE = FALSE;
+/*
+#define counter_size	30
+#define MIN_THRESHOLD	(2*counter_size)/3
+#define MAX_THRESHOLD	counter_size/3
+*/
 
 //PI regulator implementation
 int16_t Pi_Reg(float amplitude, float goal)
@@ -70,7 +75,7 @@ static THD_FUNCTION(PiRegulator, arg)
     int16_t speed = 0;
     float speed_correction = 0;
     uint16_t FREQ = 0;
-
+    //uint16_t true_counter = 0;
 
 
     while(1)
@@ -80,6 +85,27 @@ static THD_FUNCTION(PiRegulator, arg)
         speed_correction = get_dephasage();
 
         FREQ = get_highest_index();
+
+        /*
+        if((FREQ > MOV_FREQ) & (true_counter < counter_size))
+        {
+        	++true_counter;
+        }
+        else if (true_counter > 0)
+        {
+        	--true_counter;
+        }
+
+        if(true_counter > MAX_THRESHOLD)
+        {
+        	MOVE = TRUE;
+        }
+        else if (true_counter < MIN_THRESHOLD)
+        {
+        	MOVE = FALSE;
+        }
+        */
+
 
         /*
         uint16_t a = FREQ;
@@ -92,10 +118,11 @@ static THD_FUNCTION(PiRegulator, arg)
 
         //mainly for readability purposes
         MOVE = FREQ > MOV_FREQ;
+
         bool no_obstacle_detected = ((get_prox_mean_right() < prox_distance) & (get_prox_mean_left() < prox_distance));
         bool obstacle_in_front = ((get_prox_front_right() > prox_distance) || (get_prox_front_left() > prox_distance));
-        bool obstacle_left = ((get_prox_left() > prox_distance) & (speed_correction > ROTATION_THRESHOLD) & MOVE);
-        bool obstacle_right = ((get_prox_right() > prox_distance) & (speed_correction < -ROTATION_THRESHOLD) & MOVE);
+        bool obstacle_left = ((get_prox_left() > prox_distance) & MOVE);
+        bool obstacle_right = ((get_prox_right() > prox_distance) & MOVE);
         bool obstacle_on_side = (obstacle_left || obstacle_right);
 
         if(!MOVE || (get_highest_amplitude() < MIN_VALUE_THRESHOLD))
@@ -107,18 +134,20 @@ static THD_FUNCTION(PiRegulator, arg)
         {
         	speed = Pi_Reg(get_highest_amplitude(), goal_amplitude);
 
-        	if(fabsf(speed_correction) < ROTATION_THRESHOLD)
+        	if(fabsf(speed_correction) < 2*ROTATION_THRESHOLD)
 			{
 				speed_correction = 0;
 			}
 			else if(speed_correction >= 0)
 			{
-				speed_correction = ROTATION_COEFF;
+				//speed_correction = ROTATION_COEFF;
+				speed_correction = speed/2;
 				//speed = 0;  //Mode 2
 			}
 			else if(speed_correction < 0)
 			{
-				speed_correction = -ROTATION_COEFF;
+				//speed_correction = -ROTATION_COEFF;
+				speed_correction = -speed/2;
 				//speed = 0;   //Mode 2
 			}
 
@@ -127,11 +156,11 @@ static THD_FUNCTION(PiRegulator, arg)
         else if (get_prox_front_right() < get_prox_right() || get_prox_front_left() < get_prox_left())
         {
         	speed = prox_speed;
-        	if(get_prox_front_right > prox_distance)
+        	if(get_prox_front_right() > (prox_distance/2))
         	{
         		speed_correction = prox_speed;
         	}
-        	else if(get_prox_front_left > prox_distance)
+        	else if(get_prox_front_left() > (prox_distance/2))
         	{
         		speed_correction = prox_speed;
         	}
@@ -139,10 +168,11 @@ static THD_FUNCTION(PiRegulator, arg)
         	{
         		speed_correction = 0;
         	}
+        	set_body_led(1);//test
         }
         else if (obstacle_on_side || obstacle_in_front)
         {
-        	speed = 400;
+        	speed = ROTATION_COEFF;
         	if(get_prox_right() >= get_prox_left())
         	{
         		speed_correction = -get_prox_front_right()*2-(get_prox_side_right()+get_prox_right())/2-get_prox_back_right();
@@ -151,7 +181,7 @@ static THD_FUNCTION(PiRegulator, arg)
         	{
         		speed_correction = get_prox_front_left()*2 + (get_prox_side_left()+get_prox_left())/2 + get_prox_back_left();
         	}
-
+        	set_body_led(1);//test
         }
 
 		right_motor_set_speed(speed - speed_correction);
