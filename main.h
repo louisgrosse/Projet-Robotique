@@ -23,7 +23,7 @@ extern "C" {
 #define prox_distance_front		125
 #define prox_distance_side		25
 #define prox_distance			60
-#define prox_speed				600
+#define prox_speed				300
 #define PHASE_THRESHOLD			4.5f	//Phase threshold
 #define MIN_VALUE_THRESHOLD 	10000   //Amplitude threshold
 

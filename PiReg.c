@@ -15,10 +15,6 @@
 
 static bool MOVE = FALSE;
 
-//#define counter_size	128
-//#define MIN_THRESHOLD	(3*counter_size)/4
-//#define MAX_THRESHOLD	counter_size/2
-
 
 //PI regulator implementation
 int16_t Pi_Reg(float amplitude, float goal)
@@ -33,7 +29,12 @@ int16_t Pi_Reg(float amplitude, float goal)
 
 	if(fabsf(error) < ERROR_THRESHOLD)
 	{
+		set_body_led(1);
 		return 0;
+	}
+	else
+	{
+		set_body_led(0);
 	}
 
 	int32_t error1 = (int32_t) error;
@@ -72,11 +73,10 @@ static THD_FUNCTION(PiRegulator, arg)
     systime_t time;
 
     int16_t speed = 0;
-    float speed_correction = 0;
-    uint16_t FREQ = 0;
-//    uint16_t true_counter = 0;
-//    static bool  MOVE_FREQ = FALSE;
 
+    float speed_correction = 0; //factor that will determine the rotation of the robot
+
+    uint16_t FREQ = 0;
 
     while(1)
     {
@@ -86,56 +86,22 @@ static THD_FUNCTION(PiRegulator, arg)
 
         FREQ = get_highest_index();
 
-//        MOVE_FREQ = (FREQ > MOV_FREQ);
-        /*
-        if(MOVE_FREQ & (true_counter < counter_size))
-        {
-        	true_counter += 1;
-        }
-        else if (true_counter > 3)
-        {
-        	true_counter -= 4;
-        }
-
-        if(true_counter > MAX_THRESHOLD)
-        {
-        	MOVE_FREQ = TRUE;
-        }
-        else if (true_counter < MIN_THRESHOLD)
-        {
-        	MOVE_FREQ = FALSE;
-        }
-
-        if(MOVE_FREQ)
-        {
-        	set_body_led(1);
-        }
-        else
-        {
-        	set_body_led(0);
-        }
-		*/
-
-
-        /*
-        uint16_t a = FREQ;
-        uint16_t b = MOV_FREQ;
-        volatile float c = fabsf(speed_correction);
-        float d = ROTATION_THRESHOLD;
-        volatile unsigned int e = get_prox_front_right();
-        volatile unsigned int f = get_prox_front_left();
-        */
+        MOVE = ((FREQ > MOV_FREQ) & (get_selector()>7) & (get_highest_amplitude() > MIN_VALUE_THRESHOLD));
 
         //mainly for readability purposes
 
-        MOVE = ((FREQ > MOV_FREQ) & (get_selector()>7) & (get_highest_amplitude() > MIN_VALUE_THRESHOLD));
-
 		bool obstacle_in_front = ((get_prox_front_right() > prox_distance) || (get_prox_front_left() > prox_distance));
-        bool no_obstacle_detected = ((get_prox_mean_right() < prox_distance) & (get_prox_mean_left() < prox_distance) & !obstacle_in_front);
         bool obstacle_left = (get_prox_left() > prox_distance);
         bool obstacle_right = (get_prox_right() > prox_distance);
         bool obstacle_on_side = (obstacle_left || obstacle_right);
+
+        //corrects the trajectory of the robot if it got too close to an obstacle
+        bool prox_correction = (get_prox_front_right() < get_prox_right() || get_prox_front_left() < get_prox_left());
+
+
         bool obstacle_in_back = ((get_prox_back_right() > prox_distance) || (get_prox_back_left() > prox_distance));;
+
+        bool no_obstacle_detected = ((get_prox_mean_right() < prox_distance) & (get_prox_mean_left() < prox_distance) & !obstacle_in_front);
 
         if(!MOVE)
         {
@@ -152,48 +118,47 @@ static THD_FUNCTION(PiRegulator, arg)
 			}
 			else if(speed_correction >= 0)
 			{
-				//speed_correction = ROTATION_COEFF;
-				speed_correction = speed/3;
+				speed_correction = speed/3; //if the robot is far it'll rotate faster
 				//speed = 0;  //Mode 2
 			}
 			else if(speed_correction < 0)
 			{
-				//speed_correction = -ROTATION_COEFF;
 				speed_correction = -speed/3;
 				//speed = 0;   //Mode 2
 			}
-
-			set_body_led(0);//test
         }
-        else if (get_prox_front_right() < get_prox_right() || get_prox_front_left() < get_prox_left())
+        else if (prox_correction)
         {
-        	speed = prox_speed;
-        	if(get_prox_front_right() > prox_distance)
+        	//if the robot got too close to a wall it will turn away from it
+        	speed = 400;
+        	if(get_prox_front_right() > 30)
         	{
-        		speed_correction = -prox_speed;
+        		//the robot got too close to an obstacle on its right
+        		speed_correction = -600;
         	}
-        	else if(get_prox_front_left() > prox_distance)
+        	else if(get_prox_front_left() > 30)
         	{
-        		speed_correction = prox_speed;
+        		//the robot got too close to an obstacle on its right
+        		speed_correction = 600;
         	}
         	else
         	{
+        		//the wall is far away so the robot can just go straight
         		speed_correction = 0;
         	}
-        	//set_body_led(1);//test
         }
         else if (obstacle_on_side || obstacle_in_front || obstacle_in_back)
         {
+        	//an obstacle is detected and we wrote an equation that will describe the rotation depending on each captor and their weight
         	speed = ROTATION_COEFF;
-        	if(get_prox_right() >= get_prox_left())
+        	if(get_prox_front_right() >= get_prox_front_left())
         	{
-        		speed_correction = -get_prox_front_right()*2-(get_prox_side_right()+get_prox_right())-2*get_prox_back_right();
+        		speed_correction = -get_prox_front_right()*2-get_prox_mean_right()-get_prox_back_right()/2;
         	}
         	else
         	{
-        		speed_correction = get_prox_front_left()*2 + (get_prox_side_left()+get_prox_left()) + 2*get_prox_back_left();
+        		speed_correction = get_prox_front_left()*2 + get_prox_mean_left() + get_prox_back_left()/2;
         	}
-        	//set_body_led(0);//test
         }
 
 		right_motor_set_speed(speed - speed_correction);
