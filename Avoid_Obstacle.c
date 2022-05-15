@@ -59,7 +59,7 @@ static THD_FUNCTION(AvoidObstacle, arg) {
     	prox_test7 = get_calibrated_prox(7);
 
 
-    	/*
+    	//elimination of the outliers
     	if(prox_test0 > 10*correction)
     	{
     		prox_test0 = prox_front_right;
@@ -84,7 +84,7 @@ static THD_FUNCTION(AvoidObstacle, arg) {
 		{
 			prox_test7 = prox_front_left;
 		}
-		*/
+
 
 
     	prox_back_right = prox_test3;
@@ -93,8 +93,8 @@ static THD_FUNCTION(AvoidObstacle, arg) {
     	prox_front_right = prox_test0;
 		prox_front_left = prox_test7;
 
-		prox_mean_right = (2*prox_test2 + prox_test1)/3; //mean between the 2 front right sensors
-		prox_mean_left = (2*prox_test5 + prox_test6)/3;  //mean between the 2 front left sensors
+		prox_mean_right = (prox_test2 + prox_test1)/2; //mean between the 2 front right sensors
+		prox_mean_left = (prox_test5 + prox_test6)/2;  //mean between the 2 front left sensors
 
 
 		prox_side_right = prox_test1;

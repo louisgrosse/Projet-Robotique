@@ -28,7 +28,7 @@ static float micBack_output[FFT_SIZE];
 #define MIN_FREQ 		80
 #define MAX_FREQ 		90
 #define MIN_FREQ_LOW	20
-#define MAX_FREQ_LOW	60
+#define MAX_FREQ_LOW	50
 
 //Highest amplitudes of the mics
 static float highest_amp_left = MIN_VALUE_THRESHOLD;

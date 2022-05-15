@@ -15,7 +15,6 @@
 
 static bool MOVE = FALSE;
 
-
 //PI regulator implementation
 int16_t Pi_Reg(float amplitude, float goal)
 {
@@ -130,20 +129,22 @@ static THD_FUNCTION(PiRegulator, arg)
         else if (prox_correction)
         {
         	//if the robot got too close to a wall it will turn away from it
-        	speed = 400;
-        	if(get_prox_front_right() > 30)
+        	if(get_prox_front_right() > 20)
         	{
         		//the robot got too close to an obstacle on its right
-        		speed_correction = -600;
+        		speed = 200;
+        		speed_correction = -2*prox_speed-100;
         	}
-        	else if(get_prox_front_left() > 30)
+        	else if(get_prox_front_left() > 20)
         	{
         		//the robot got too close to an obstacle on its right
-        		speed_correction = 600;
+        		speed = 200;
+        		speed_correction = 2*prox_speed+100;
         	}
         	else
         	{
         		//the wall is far away so the robot can just go straight
+        		speed = 2*prox_speed;
         		speed_correction = 0;
         	}
         }
